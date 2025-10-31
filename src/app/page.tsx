@@ -1,65 +1,38 @@
-import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <>
+    <section className="min-h-[70vh] grid items-center px-4 overflow-hidden">
+      <div className="mx-auto grid w-full max-w-6xl gap-10 md:grid-cols-2">
+        {/* 왼쪽: 로고 (모바일에서 먼저, 데스크톱 좌측) */}
+        <div className="logo-stage">
+          {/* 로고 페이드인 이미지 */}
+          <img src="/logo.png" alt="THE OPENING SIGN" className="relative z-10 w-[min(80vw,520px)] h-auto logo-fade-in" />
+          {/* 반짝임 효과 제거 (로고만 페이드인) */}
+        </div>
+        {/* 오른쪽: 문구 (모바일에서는 로고 아래로) */}
+        <div className="order-1 md:order-none flex flex-col gap-4 md:self-center md:pl-8 max-w-prose">
+          <h1 className="text-xl font-extrabold tracking-wide" style={{ color: '#ED6A26' }}>HOSPITAL SIGNAGE PROFESSIONAL TEAM</h1>
+          <p className="text-base leading-7 text-slate-700">
+            저희는 국내 1위 간판 전문 서비스 간판의품격에서 다양한 병의원 프로젝트 경험을 바탕으로 탄생한 병의원 사이니지 전문팀입니다.
+          </p>
+          <p className="text-base leading-7 text-slate-700">
+            병의원 사이니지 전문 경력을 지닌 2030으로 구성된 젊은 팀으로써 디테일 중시하며, 디자인의 힘으로 차별화된 결과를 만들어냅니다.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
+    </section>
+    {/* 하단 중앙 포트폴리오 보러가기 버튼 */}
+    <div className="flex justify-center py-4 -mt-20">
+      <Link
+        href="/portfolio"
+        className="rounded-lg px-6 py-3 font-semibold text-white shadow-sm transition-colors"
+        style={{ backgroundColor: '#D45720' }}
+      >
+        포트폴리오 보러가기
+      </Link>
     </div>
+    </>
   );
 }

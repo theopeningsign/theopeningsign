@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#e2590a"/>
+      <stop offset="100%" stop-color="#d64f05"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#g)"/>
+  <!-- Simplified monogram inspired by 'TO' -->
+  <path fill="#ffffff" d="M76 48a16 16 0 0 0-16 16v128c0 8.837 7.163 16 16 16h4c8.837 0 16-7.163 16-16V84h58c18.2-25.4 47.4-40 78-40-49.5-8.2-96.5 13.8-120 44H96V64a16 16 0 0 0-16-16h-4z" opacity=".92"/>
+  <path fill="#ffffff" d="M206 128a78 78 0 1 0-58 75.3c25.3-8.3 50.3-36.6 52-84.3a18 18 0 0 0-36-.9c-1.2 30.7-17 50.9-36.6 60.8-19.6 9.8-44.2 7.8-62.9-6.5 13.1 25.6 40.9 42.6 72.1 42.6 39.8 0 72.4-28.7 78.3-67a78.7 78.7 0 0 0 .9-20z"/>
+</svg>
+
