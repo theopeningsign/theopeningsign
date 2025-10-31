@@ -21,8 +21,13 @@ export default function ContactInfo() {
 
   return (
     <ul className="list-none space-y-1.5 text-slate-700 leading-7 pl-4">
-      <li>
-        <span className="font-semibold text-slate-900">오시는길</span> : 서울 강서구 공항대로 659 7층 (도레미빌딩)
+      <li className="leading-7 flex">
+        <span className="font-semibold text-slate-900 whitespace-nowrap">오시는길 :</span>
+        <span className="ml-2">
+          <span>서울 강서구 공항대로 659</span>
+          <br className="sm:hidden" />
+          <span>7층 (도레미빌딩)</span>
+        </span>
       </li>
       <li>
         <div className={`flex items-center justify-between gap-2 ${copied === 'phone' ? 'text-[#ED6A26]' : ''}`}>
