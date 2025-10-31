@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Copy } from 'lucide-react';
+import { Copy, Phone, Mail } from 'lucide-react';
 
 export default function ContactFloating() {
   const [copied, setCopied] = useState<'phone' | 'email' | null>(null);
@@ -25,7 +25,10 @@ export default function ContactFloating() {
         CONTACT US
       </div>
       <div className={`flex items-center justify-between gap-2 ${copied === 'phone' ? 'text-[#ED6A26]' : 'text-slate-700'}`}>
-        <span className="text-sm">H.P: {phoneNumber}</span>
+        <span className="text-sm flex items-center gap-2">
+          <Phone size={14} className="text-[#ED6A26]" />
+          {phoneNumber}
+        </span>
         <button
           aria-label="전화번호 복사"
           onClick={() => copyToClipboard(phoneNumber.replace(/\./g, ''), 'phone')}
@@ -35,7 +38,10 @@ export default function ContactFloating() {
         </button>
       </div>
       <div className={`mt-2 flex items-center justify-between gap-2 ${copied === 'email' ? 'text-[#ED6A26]' : 'text-slate-700'}`}>
-        <span className="text-sm">이메일: {email}</span>
+        <span className="text-sm flex items-center gap-2">
+          <Mail size={14} className="text-[#ED6A26]" />
+          {email}
+        </span>
         <button
           aria-label="이메일 복사"
           onClick={() => copyToClipboard(email, 'email')}
