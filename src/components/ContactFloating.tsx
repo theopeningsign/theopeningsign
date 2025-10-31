@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Copy } from 'lucide-react';
 
 export default function ContactFloating() {
   const [copied, setCopied] = useState<'phone' | 'email' | null>(null);
@@ -23,32 +24,26 @@ export default function ContactFloating() {
       <div className="mb-1 text-[10px] md:text-xs font-semibold tracking-wider" style={{ color: '#ED6A26' }}>
         CONTACT US
       </div>
-      <button
-        onClick={() => copyToClipboard(phoneNumber.replace(/\./g, ''), 'phone')}
-        className={`relative block w-full cursor-pointer text-left transition-colors hover:text-[#ED6A26] ${
-          copied === 'phone' ? 'text-[#ED6A26]' : 'text-slate-700'
-        }`}
-      >
-        <p className="text-sm text-left flex items-center">
-          <span>H.P: {phoneNumber}</span>
-          {copied === 'phone' && (
-            <span className="ml-2 text-xs font-medium whitespace-nowrap">copy</span>
-          )}
-        </p>
-      </button>
-      <button
-        onClick={() => copyToClipboard(email, 'email')}
-        className={`relative mt-2 block w-full cursor-pointer text-left transition-colors hover:text-[#ED6A26] ${
-          copied === 'email' ? 'text-[#ED6A26]' : 'text-slate-700'
-        }`}
-      >
-        <p className="text-sm text-left flex items-center">
-          <span>이메일: {email}</span>
-          {copied === 'email' && (
-            <span className="ml-2 text-xs font-medium whitespace-nowrap">copy</span>
-          )}
-        </p>
-      </button>
+      <div className={`flex items-center justify-between gap-2 ${copied === 'phone' ? 'text-[#ED6A26]' : 'text-slate-700'}`}>
+        <span className="text-sm">H.P: {phoneNumber}</span>
+        <button
+          aria-label="전화번호 복사"
+          onClick={() => copyToClipboard(phoneNumber.replace(/\./g, ''), 'phone')}
+          className="p-1 rounded hover:bg-slate-100 active:scale-95 transition"
+        >
+          <Copy size={16} className={copied === 'phone' ? 'text-[#ED6A26]' : 'text-slate-600'} />
+        </button>
+      </div>
+      <div className={`mt-2 flex items-center justify-between gap-2 ${copied === 'email' ? 'text-[#ED6A26]' : 'text-slate-700'}`}>
+        <span className="text-sm">이메일: {email}</span>
+        <button
+          aria-label="이메일 복사"
+          onClick={() => copyToClipboard(email, 'email')}
+          className="p-1 rounded hover:bg-slate-100 active:scale-95 transition"
+        >
+          <Copy size={16} className={copied === 'email' ? 'text-[#ED6A26]' : 'text-slate-600'} />
+        </button>
+      </div>
     </div>
   );
 }

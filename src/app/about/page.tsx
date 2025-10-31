@@ -166,7 +166,7 @@ export default function AboutPage() {
             </div>
           </div>
         </section>
-        <div className="flex-shrink-0 md:ml-auto">
+        <div className="flex-shrink-0 self-center md:ml-auto">
           <Image src="/logo.png" alt="THE OPENING SIGN" width={400} height={100} className="h-24 w-auto md:h-32" />
         </div>
       </div>
