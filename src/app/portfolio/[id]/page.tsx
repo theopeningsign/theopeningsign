@@ -11,12 +11,11 @@ export const revalidate = 60;
 export const dynamic = 'force-dynamic';
 
 interface Props {
-    params: Promise<{ id: string }>;
+    params: { id: string };
 }
 
 export default async function PortfolioDetailPage({ params }: Props) {
-    const { id: rawId } = await params;
-    const idParam = rawId || '';
+    const idParam = params?.id || '';
     const item = await getPortfolioById(idParam);
     if (!item) return notFound();
 
@@ -57,12 +56,10 @@ export default async function PortfolioDetailPage({ params }: Props) {
 	);
 }
 
-// Next.js 최신 버전에서는 generateMetadata의 params가 Promise로 전달됩니다.
-type MetadataProps = { params: Promise<{ id: string }> };
+type MetadataProps = { params: { id: string } };
 
 export async function generateMetadata({ params }: MetadataProps): Promise<Metadata> {
-  const { id: rawId } = await params;
-  const idParam = rawId || '';
+  const idParam = params?.id || '';
   const item = await getPortfolioById(idParam);
   if (!item) return { title: '포트폴리오 상세' };
   const title = `${item.title} | THE OPENING SIGN 포트폴리오`;

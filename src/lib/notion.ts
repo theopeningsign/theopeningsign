@@ -169,7 +169,7 @@ export async function getPortfolios(options?: NotionQueryOptions): Promise<Portf
         const first = await notionQueryDatabase(buildQueryOptions(options));
         let results = first.results
 			.map(mapPageToPortfolioItem)
-			.filter((x): x is PortfolioItem => Boolean(x));
+			.filter((x: any): x is PortfolioItem => Boolean(x));
         // 결과가 0개면(또는 DB에 '노출여부' 사용 안할 때) 필터 없이 재시도
         if (results.length === 0 && (!options || !options.filterType)) {
             const fallback = await notionQueryDatabase({
@@ -178,11 +178,11 @@ export async function getPortfolios(options?: NotionQueryOptions): Promise<Portf
             });
             results = fallback.results
                 .map(mapPageToPortfolioItem)
-                .filter((x): x is PortfolioItem => Boolean(x));
+                .filter((x: unknown): x is PortfolioItem => Boolean(x));
         }
         // 필요 시 '시공완료'가 있는 항목만 남기기
         if (options?.onlyWithCompletedAt) {
-            results = results.filter((p) => Boolean(p.completedAt));
+            results = results.filter((p: PortfolioItem) => Boolean(p.completedAt));
         }
 
         // '시공완료' 최신순으로 재정렬, 없으면 작성일로 폴백
@@ -200,7 +200,7 @@ export async function getPortfolios(options?: NotionQueryOptions): Promise<Portf
             return 0;
         };
         // 시공완료가 있는 항목을 우선 배치하고, 같은 조건에서는 최신순
-        results.sort((a, b) => {
+        results.sort((a: PortfolioItem, b: PortfolioItem) => {
             const aHas = Boolean(a.completedAt);
             const bHas = Boolean(b.completedAt);
             if (aHas !== bHas) return aHas ? -1 : 1;
