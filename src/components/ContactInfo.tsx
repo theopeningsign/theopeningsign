@@ -26,7 +26,7 @@ export default function ContactInfo() {
         <span className="ml-2">
           <span>서울 강서구 공항대로 659</span>
           <br className="sm:hidden" />
-          <span>7층 (도레미빌딩)</span>
+          <span> 도레미빌딩 7층</span>
         </span>
       </li>
       <li>
