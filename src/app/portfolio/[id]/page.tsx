@@ -10,12 +10,14 @@ import HeroLightbox from '@/components/HeroLightbox';
 export const revalidate = 60;
 export const dynamic = 'force-dynamic';
 
+type MaybePromise<T> = T | Promise<T>;
 interface Props {
-    params: { id: string };
+    params: MaybePromise<{ id: string }>;
 }
 
 export default async function PortfolioDetailPage({ params }: Props) {
-    const idParam = params?.id || '';
+    const resolved = (typeof (params as any)?.then === 'function') ? await (params as any) : params as { id: string };
+    const idParam = resolved?.id || '';
     const item = await getPortfolioById(idParam);
     if (!item) return notFound();
 
@@ -56,10 +58,11 @@ export default async function PortfolioDetailPage({ params }: Props) {
 	);
 }
 
-type MetadataProps = { params: { id: string } };
+type MetadataProps = { params: MaybePromise<{ id: string }> };
 
 export async function generateMetadata({ params }: MetadataProps): Promise<Metadata> {
-  const idParam = params?.id || '';
+  const resolved = (typeof (params as any)?.then === 'function') ? await (params as any) : params as { id: string };
+  const idParam = resolved?.id || '';
   const item = await getPortfolioById(idParam);
   if (!item) return { title: '포트폴리오 상세' };
   const title = `${item.title} | THE OPENING SIGN 포트폴리오`;

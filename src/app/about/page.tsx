@@ -156,7 +156,7 @@ export default function AboutPage() {
                 className="block cursor-pointer transition-opacity hover:opacity-90"
               >
                 <Image 
-                  src="/map.jpg" 
+                  src="/map.JPG" 
                   alt="오시는길 지도" 
                   width={400} 
                   height={300} 

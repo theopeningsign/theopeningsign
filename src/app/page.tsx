@@ -23,8 +23,8 @@ export default function Home() {
         </div>
       </div>
     </section>
-    {/* 하단 중앙 포트폴리오 보러가기 버튼 */}
-    <div className="flex justify-center py-4 -mt-20">
+    {/* 하단 중앙 포트폴리오 보러가기 버튼 (모바일 겹침 방지: 음수 마진 제거) */}
+    <div className="flex justify-center py-6 mt-2 md:mt-0">
       <Link
         href="/portfolio"
         className="rounded-lg px-6 py-3 font-semibold text-white shadow-sm transition-colors"
