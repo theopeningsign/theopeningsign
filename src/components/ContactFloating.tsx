@@ -29,10 +29,10 @@ export default function ContactFloating() {
           copied === 'phone' ? 'text-[#ED6A26]' : 'text-slate-700'
         }`}
       >
-        <p className="text-sm text-left">
-          H.P: {phoneNumber}
+        <p className="text-sm text-left flex items-center">
+          <span>H.P: {phoneNumber}</span>
           {copied === 'phone' && (
-            <span className="absolute left-full ml-2 text-xs font-medium whitespace-nowrap">copy</span>
+            <span className="ml-2 text-xs font-medium whitespace-nowrap">copy</span>
           )}
         </p>
       </button>
@@ -42,10 +42,10 @@ export default function ContactFloating() {
           copied === 'email' ? 'text-[#ED6A26]' : 'text-slate-700'
         }`}
       >
-        <p className="text-sm text-left">
-          이메일: {email}
+        <p className="text-sm text-left flex items-center">
+          <span>이메일: {email}</span>
           {copied === 'email' && (
-            <span className="absolute left-full ml-2 text-xs font-medium whitespace-nowrap">copy</span>
+            <span className="ml-2 text-xs font-medium whitespace-nowrap">copy</span>
           )}
         </p>
       </button>
