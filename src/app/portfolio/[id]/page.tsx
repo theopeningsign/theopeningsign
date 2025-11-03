@@ -34,7 +34,7 @@ export default async function PortfolioDetailPage({ params }: Props) {
 				: [item.coverImageUrl]
 			).filter(Boolean).map((cover, idx) => (
 				<div key={idx} className={idx > 0 ? 'mt-6' : ''}>
-					<HeroLightbox cover={cover as string} covers={item.coverImageUrls} images={item.additionalImageUrls} title={item.title} />
+					<HeroLightbox cover={cover as string} covers={item.coverImageUrls} images={item.additionalImageUrls} title={item.title} coverIndex={idx} />
 				</div>
 			))}
 
@@ -45,7 +45,7 @@ export default async function PortfolioDetailPage({ params }: Props) {
 					<div key={i} className="h-40 animate-pulse rounded-lg bg-slate-200" />
 				))}
             </div>}>
-                <Gallery images={item.additionalImageUrls} />
+                <Gallery images={item.additionalImageUrls} covers={item.coverImageUrls} cover={item.coverImageUrl} />
 			</Suspense>
 
 			{/* 설명 (간단 텍스트 백업) - 갤러리 아래로 이동 */}

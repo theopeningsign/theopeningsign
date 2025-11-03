@@ -13,7 +13,7 @@ interface Props {
 
 export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	const [index, setIndex] = useState(initialIndex);
-	const [zoomed, setZoomed] = useState(false);
+	const [zoomed, setZoomed] = useState(true); // 처음부터 크게 표시
 	const total = images.length;
 	const current = useMemo(() => images[index], [images, index]);
 
