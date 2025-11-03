@@ -154,4 +154,24 @@ html, body {
 .stars .star:nth-child(2) { top: 8%; right: 26%; animation-delay: 1.8s; }
 .stars .star:nth-child(3) { top: 28%; left: 58%; animation-delay: 2.6s; }
 
+/* 인용부호 스타일 (간판의품격 강조) - 이중 인용부호 */
+.quote-highlight-double {
+	position: relative;
+	display: inline-block;
+}
+
+.quote-highlight-double::before {
+	content: '『';
+	color: #1e293b;
+	font-weight: bold;
+	margin-right: 0.1em;
+}
+
+.quote-highlight-double::after {
+	content: '』';
+	color: #1e293b;
+	font-weight: bold;
+	margin-left: 0.1em;
+}
+
 /* 스윕/반짝임 제거 (보존용 공간) */

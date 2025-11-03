@@ -15,7 +15,7 @@ export default function Home() {
         <div className="order-1 md:order-none flex flex-col gap-4 md:self-center md:pl-8 max-w-prose text-pretty break-keep">
           <h1 className="text-xl font-extrabold tracking-wide text-balance" style={{ color: '#ED6A26' }}>HOSPITAL SIGNAGE PROFESSIONAL TEAM</h1>
           <p className="text-base leading-7 text-slate-700 text-pretty break-keep">
-            저희는 국내 1위 간판 전문 서비스 간판의품격에서 다양한 병의원 프로젝트 경험을 바탕으로 탄생한 병의원 사이니지 전문팀입니다.
+            저희는 국내 1위 간판 전문 서비스 <span className="quote-highlight-double">간판의품격</span>에서 다양한 병의원 프로젝트 경험을 바탕으로 탄생한 병의원 사이니지 전문팀입니다.
           </p>
           <p className="text-base leading-7 text-slate-700 text-pretty break-keep">
             병의원 사이니지 전문 경력을 지닌 2030으로 구성된 젊은 팀으로써 디테일을 중시하며, 디자인의 힘으로 차별화된 결과를 만들어냅니다.

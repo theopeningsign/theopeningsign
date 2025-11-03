@@ -14,7 +14,7 @@ export default function AboutPage() {
       <section className="rounded-xl border border-slate-200 p-6 bg-white space-y-4 text-pretty break-keep">
         <h2 className="text-lg font-semibold text-balance" style={{ color: '#ED6A26' }}>HOSPITAL SIGNAGE PROFESSIONAL TEAM</h2>
         <p className="text-slate-700 leading-7 text-pretty break-keep">
-          저희는 국내 1위 간판 전문 서비스 간판의품격에서 다양한 병의원 프로젝트 경험을 바탕으로 탄생한 병의원 사이니지 전문팀입니다.
+          저희는 국내 1위 간판 전문 서비스 <span className="quote-highlight-double">간판의품격</span>에서 다양한 병의원 프로젝트 경험을 바탕으로 탄생한 병의원 사이니지 전문팀입니다.
         </p>
         <p className="text-slate-700 leading-7 text-pretty break-keep">
           병의원 사이니지 전문 경력을 지닌 2030으로 구성된 젊은 팀으로써 디테일을 중시하며, 디자인의 힘으로 차별화된 결과를 만들어냅니다.
@@ -40,7 +40,7 @@ export default function AboutPage() {
             <p className="leading-7 text-slate-700">
               가장 중요하게 생각하는 가치로써<br/>
               편안하고 친절한 커뮤니케이션을 통한<br/>
-              고객 의견개진과 니즈를 극대화
+              고객의 의견과 니즈를 적극 반영
             </p>
           </div>
 
