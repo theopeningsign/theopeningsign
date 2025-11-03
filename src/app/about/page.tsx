@@ -60,7 +60,7 @@ export default function AboutPage() {
 
           {/* TEAMWORK */}
           <div className="text-center">
-            <div className="mx-auto mb-6 grid h-48 w-48 md:h-64 md:w-64 place-items-center rounded-full px-4" style={{ backgroundColor: '#FFB999' }}>
+            <div className="mx-auto mb-6 grid h-48 w-48 md:h-64 md:w-64 place-items-center rounded-full px-4" style={{ backgroundColor: '#F67B31' }}>
               <span className="text-xl md:text-3xl font-semibold tracking-tight text-white">TEAMWORK</span>
             </div>
             <h3 className="text-2xl font-bold text-slate-900">적극적 협업</h3>
