@@ -63,6 +63,7 @@ NOTION_DATABASE_ID=your_database_id
 SITE_URL=http://localhost:3000
 SITE_NAME=GP
 SITE_DESCRIPTION=병원 간판의 새로운 기준 – GP 포트폴리오
+REVALIDATE_SECRET=theopeningsign_2025
 ```
 참고: 예시는 `.env.example`에 포함되어 있습니다.
 
@@ -76,17 +77,49 @@ npm run dev
 ## 빌드 및 배포 (Vercel)
 1) GitHub 저장소에 푸시
 2) Vercel에서 새 프로젝트로 Import
-3) Environment Variables에 위 환경변수 추가
+3) Environment Variables에 위 환경변수 모두 추가 (REVALIDATE_SECRET 포함)
 4) Deploy
 
 ## 기능 요약
-- ISR(Incremental Static Regeneration) 재검증 60초
+- ISR(Incremental Static Regeneration) 재검증 1800초 (30분)
+- On-Demand Revalidation: Notion 이미지 변경 시 즉시 반영 가능
 - Notion Database 연동: 노출여부=체크, 작성일 최신순
 - 필터 탭: 전체/LED채널/아크릴/네온/복합/기타
 - 반응형 그리드(모바일 1열, 태블릿 2열, PC 3열)
 - 이미지 최적화: Next/Image + Blur placeholder
 - 라이트박스: 전체화면, 좌우 화살표, ESC 닫기, 배경 클릭 닫기
 - 접근성: alt 텍스트, 시맨틱 마크업
+
+## On-Demand Revalidation (즉시 캐시 갱신)
+
+Notion에서 이미지를 업데이트했을 때 30분을 기다리지 않고 즉시 사이트에 반영할 수 있습니다.
+
+### 사용 방법
+
+1. **로컬 개발 환경:**
+   ```bash
+   curl -X POST "http://localhost:3000/api/revalidate?secret=theopeningsign_2025"
+   ```
+
+2. **프로덕션 환경 (Vercel):**
+   브라우저 주소창에 다음 URL을 입력하거나 POST 요청을 보내세요:
+   ```
+   https://your-site.vercel.app/api/revalidate?secret=theopeningsign_2025
+   ```
+   GET과 POST 요청 모두 지원됩니다.
+
+### Vercel 환경변수 설정
+
+1. Vercel 대시보드 → 프로젝트 선택 → Settings → Environment Variables
+2. `REVALIDATE_SECRET` 키를 추가하고 값으로 `theopeningsign_2025` 설정
+3. 모든 환경(Production, Preview, Development)에 적용
+4. 변경사항 저장 후 재배포 필요할 수 있음
+
+### 주의사항
+
+- `REVALIDATE_SECRET`은 반드시 강력한 비밀번호로 변경하세요.
+- API 엔드포인트 URL과 시크릿 키를 공개하지 마세요.
+- 성공 시 JSON 응답: `{ "revalidated": true, "now": ..., "message": "..." }`
 
 ## 주의사항
 - 실제 운영에서는 API 키를 Git에 절대 커밋하지 마세요.
