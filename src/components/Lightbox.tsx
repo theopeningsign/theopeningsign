@@ -20,7 +20,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	const [translate, setTranslate] = useState({ x: 0, y: 0 });
 	const [hasDragged, setHasDragged] = useState(false); // 실제로 드래그가 발생했는지 추적
 	// 터치 이벤트용
-	const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null);
+	const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
 	const [touchHasMoved, setTouchHasMoved] = useState(false);
 	const total = images.length;
 	const current = useMemo(() => images[index], [images, index]);
@@ -80,13 +80,13 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 		return () => window.removeEventListener('wheel', onWheel);
 	}, [scale, total]);
 
-	// 터치 이벤트 핸들러 (스와이프 및 드래그)
+	// 터치 이벤트 핸들러 (드래그)
 	const handleTouchStart = (e: React.TouchEvent) => {
 		const touch = e.touches[0];
-		setTouchStart({ x: touch.clientX, y: touch.clientY, time: Date.now() });
+		setTouchStart({ x: touch.clientX, y: touch.clientY });
 		setTouchHasMoved(false);
 		
-		// 확대된 상태일 때는 드래그 시작
+		// 확대된 상태일 때만 드래그 시작
 		if (scale > 1) {
 			setIsDragging(true);
 			setHasDragged(false);
@@ -95,7 +95,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	};
 
 	const handleTouchMove = (e: React.TouchEvent) => {
-		if (!touchStart) return;
+		if (!touchStart || scale <= 1) return;
 		
 		const touch = e.touches[0];
 		const deltaX = touch.clientX - touchStart.x;
@@ -105,16 +105,13 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 		// 5px 이상 이동했으면 움직임으로 간주
 		if (moveDistance > 5) {
 			setTouchHasMoved(true);
+			setHasDragged(true);
 		}
 
 		// 확대된 상태일 때는 드래그 이동
-		if (scale > 1 && isDragging) {
+		if (isDragging) {
 			const newX = touch.clientX - dragStart.x;
 			const newY = touch.clientY - dragStart.y;
-			
-			if (moveDistance > 5) {
-				setHasDragged(true);
-			}
 			
 			const maxTranslate = 200;
 			const clampedX = Math.max(-maxTranslate, Math.min(maxTranslate, newX));
@@ -127,12 +124,6 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	const handleTouchEnd = (e: React.TouchEvent) => {
 		if (!touchStart) return;
 
-		const touch = e.changedTouches[0];
-		const deltaX = touch.clientX - touchStart.x;
-		const deltaY = touch.clientY - touchStart.y;
-		const moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-		const timeDiff = Date.now() - touchStart.time;
-
 		setIsDragging(false);
 
 		// 확대 상태에서 드래그가 발생했으면 터치 클릭 무시
@@ -143,23 +134,6 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 			}, 100);
 			setTouchStart(null);
 			return;
-		}
-
-		// 기본 상태에서 스와이프 감지 (좌우로 50px 이상 이동, 300ms 이내)
-		if (scale === 1 && moveDistance > 50 && timeDiff < 300) {
-			if (Math.abs(deltaX) > Math.abs(deltaY)) {
-				// 좌우 스와이프
-				if (deltaX > 0) {
-					// 오른쪽으로 스와이프 = 이전 사진
-					goPrev();
-				} else {
-					// 왼쪽으로 스와이프 = 다음 사진
-					goNext();
-				}
-				setTouchStart(null);
-				setTouchHasMoved(false);
-				return;
-			}
 		}
 
 		// 확대 상태에서 터치 클릭 (드래그가 없었을 때만)
