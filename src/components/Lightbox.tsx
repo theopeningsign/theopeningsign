@@ -19,6 +19,9 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 	const [translate, setTranslate] = useState({ x: 0, y: 0 });
 	const [hasDragged, setHasDragged] = useState(false); // 실제로 드래그가 발생했는지 추적
+	// 터치 이벤트용
+	const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null);
+	const [touchHasMoved, setTouchHasMoved] = useState(false);
 	const total = images.length;
 	const current = useMemo(() => images[index], [images, index]);
 
@@ -76,6 +79,101 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 		window.addEventListener('wheel', onWheel, { passive: false });
 		return () => window.removeEventListener('wheel', onWheel);
 	}, [scale, total]);
+
+	// 터치 이벤트 핸들러 (스와이프 및 드래그)
+	const handleTouchStart = (e: React.TouchEvent) => {
+		const touch = e.touches[0];
+		setTouchStart({ x: touch.clientX, y: touch.clientY, time: Date.now() });
+		setTouchHasMoved(false);
+		
+		// 확대된 상태일 때는 드래그 시작
+		if (scale > 1) {
+			setIsDragging(true);
+			setHasDragged(false);
+			setDragStart({ x: touch.clientX - translate.x, y: touch.clientY - translate.y });
+		}
+	};
+
+	const handleTouchMove = (e: React.TouchEvent) => {
+		if (!touchStart) return;
+		
+		const touch = e.touches[0];
+		const deltaX = touch.clientX - touchStart.x;
+		const deltaY = touch.clientY - touchStart.y;
+		const moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+		
+		// 5px 이상 이동했으면 움직임으로 간주
+		if (moveDistance > 5) {
+			setTouchHasMoved(true);
+		}
+
+		// 확대된 상태일 때는 드래그 이동
+		if (scale > 1 && isDragging) {
+			const newX = touch.clientX - dragStart.x;
+			const newY = touch.clientY - dragStart.y;
+			
+			if (moveDistance > 5) {
+				setHasDragged(true);
+			}
+			
+			const maxTranslate = 200;
+			const clampedX = Math.max(-maxTranslate, Math.min(maxTranslate, newX));
+			const clampedY = Math.max(-maxTranslate, Math.min(maxTranslate, newY));
+			
+			setTranslate({ x: clampedX, y: clampedY });
+		}
+	};
+
+	const handleTouchEnd = (e: React.TouchEvent) => {
+		if (!touchStart) return;
+
+		const touch = e.changedTouches[0];
+		const deltaX = touch.clientX - touchStart.x;
+		const deltaY = touch.clientY - touchStart.y;
+		const moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+		const timeDiff = Date.now() - touchStart.time;
+
+		setIsDragging(false);
+
+		// 확대 상태에서 드래그가 발생했으면 터치 클릭 무시
+		if (scale > 1 && hasDragged) {
+			setTimeout(() => {
+				setHasDragged(false);
+				setTouchHasMoved(false);
+			}, 100);
+			setTouchStart(null);
+			return;
+		}
+
+		// 기본 상태에서 스와이프 감지 (좌우로 50px 이상 이동, 300ms 이내)
+		if (scale === 1 && moveDistance > 50 && timeDiff < 300) {
+			if (Math.abs(deltaX) > Math.abs(deltaY)) {
+				// 좌우 스와이프
+				if (deltaX > 0) {
+					// 오른쪽으로 스와이프 = 이전 사진
+					goPrev();
+				} else {
+					// 왼쪽으로 스와이프 = 다음 사진
+					goNext();
+				}
+				setTouchStart(null);
+				setTouchHasMoved(false);
+				return;
+			}
+		}
+
+		// 확대 상태에서 터치 클릭 (드래그가 없었을 때만)
+		if (scale > 1 && !touchHasMoved && !hasDragged) {
+			setScale(1);
+			setTranslate({ x: 0, y: 0 });
+		}
+
+		setTimeout(() => {
+			setHasDragged(false);
+			setTouchHasMoved(false);
+		}, 100);
+		setTouchStart(null);
+	};
 
 	// 이미지 변경 시 scale 및 translate 초기화
 	useEffect(() => {
@@ -211,37 +309,37 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 					<ChevronRight />
 				</button>
 
-				{/* PC에서만 보이는 안내 문구 및 확대 버튼 */}
-				<div className="hidden md:flex absolute top-20 left-1/2 z-20 -translate-x-1/2 items-center gap-3 bg-black/60 backdrop-blur-sm rounded-lg px-4 py-2">
-					<span className="text-sm text-white whitespace-nowrap">확대 및 축소 : Ctrl + 마우스 휠</span>
-					<div className="h-4 w-px bg-white/40" />
+				{/* 확대 버튼 (모바일 포함 모든 화면) */}
+				<div className="flex absolute top-20 left-1/2 z-20 -translate-x-1/2 items-center gap-2 md:gap-3 bg-black/60 backdrop-blur-sm rounded-lg px-3 md:px-4 py-2">
+					<span className="hidden md:inline text-sm text-white whitespace-nowrap">확대 및 축소 : Ctrl + 마우스 휠</span>
+					<div className="hidden md:block h-4 w-px bg-white/40" />
 					<div className="flex gap-1">
 						<button
 							onClick={() => handleZoomClick(1)}
-							className={`px-3 py-1 text-xs rounded transition-colors ${
+							className={`px-2 md:px-3 py-1 text-xs rounded transition-colors ${
 								scale === 1 
 									? 'bg-white/30 text-white font-semibold' 
-									: 'bg-white/10 text-white/80 hover:bg-white/20'
+									: 'bg-white/10 text-white/80 hover:bg-white/20 active:bg-white/25'
 							}`}
 						>
 							100%
 						</button>
 						<button
 							onClick={() => handleZoomClick(1.5)}
-							className={`px-3 py-1 text-xs rounded transition-colors ${
+							className={`px-2 md:px-3 py-1 text-xs rounded transition-colors ${
 								scale === 1.5 
 									? 'bg-white/30 text-white font-semibold' 
-									: 'bg-white/10 text-white/80 hover:bg-white/20'
+									: 'bg-white/10 text-white/80 hover:bg-white/20 active:bg-white/25'
 							}`}
 						>
 							150%
 						</button>
 						<button
 							onClick={() => handleZoomClick(2)}
-							className={`px-3 py-1 text-xs rounded transition-colors ${
+							className={`px-2 md:px-3 py-1 text-xs rounded transition-colors ${
 								scale === 2 
 									? 'bg-white/30 text-white font-semibold' 
-									: 'bg-white/10 text-white/80 hover:bg-white/20'
+									: 'bg-white/10 text-white/80 hover:bg-white/20 active:bg-white/25'
 							}`}
 						>
 							200%
@@ -256,12 +354,16 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 							transform: `scale(${scale}) translate(${translate.x}px, ${translate.y}px)`, 
 							transformOrigin: 'center', 
 							transition: isDragging ? 'none' : (scale !== 1 ? 'transform 0.1s ease-out' : 'none'),
-							cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : (zoomed ? 'zoom-out' : 'zoom-in')
+							cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : (zoomed ? 'zoom-out' : 'zoom-in'),
+							touchAction: scale > 1 ? 'pan-x pan-y' : 'none'
 						}}
 						onMouseDown={handleMouseDown}
 						onMouseMove={handleMouseMove}
 						onMouseUp={handleMouseUp}
 						onClick={handleClick}
+						onTouchStart={handleTouchStart}
+						onTouchMove={handleTouchMove}
+						onTouchEnd={handleTouchEnd}
 						onMouseLeave={() => {
 							// 마우스가 영역을 벗어날 때는 전역 이벤트가 처리
 						}}
