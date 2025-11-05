@@ -24,6 +24,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	const [touchHasMoved, setTouchHasMoved] = useState(false);
 	// 핀치 줌용
 	const [pinchStart, setPinchStart] = useState<{ distance: number; scale: number } | null>(null);
+	const [wasPinching, setWasPinching] = useState(false); // 핀치 줌이 있었는지 추적
 	const total = images.length;
 	const current = useMemo(() => images[index], [images, index]);
 
@@ -95,6 +96,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 		if (e.touches.length === 2) {
 			const distance = getTouchDistance(e.touches[0], e.touches[1]);
 			setPinchStart({ distance, scale });
+			setWasPinching(true);
 			setTouchStart(null);
 			setIsDragging(false);
 			return;
@@ -163,6 +165,11 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 				setIsDragging(true);
 				setHasDragged(false);
 				setDragStart({ x: touch.clientX - translate.x, y: touch.clientY - translate.y });
+			} else {
+				// 모든 손가락이 떼어졌으면 핀치 줌 플래그 유지 (일정 시간 후 리셋)
+				setTimeout(() => {
+					setWasPinching(false);
+				}, 300); // 300ms 후에만 터치 클릭으로 인식 가능
 			}
 			return;
 		}
@@ -173,6 +180,19 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 
 		// 확대 상태에서 드래그가 발생했으면 터치 클릭 무시
 		if (scale > 1 && hasDragged) {
+			setTimeout(() => {
+				setHasDragged(false);
+				setTouchHasMoved(false);
+			}, 100);
+			setTouchStart(null);
+			return;
+		}
+
+		// 핀치 줌 직후에는 터치 클릭 무시 (확대 상태 유지)
+		if (wasPinching && scale > 1) {
+			setTimeout(() => {
+				setWasPinching(false);
+			}, 300);
 			setTimeout(() => {
 				setHasDragged(false);
 				setTouchHasMoved(false);
