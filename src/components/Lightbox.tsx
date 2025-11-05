@@ -92,11 +92,6 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 
 	// 터치 이벤트 핸들러 (드래그 및 핀치 줌)
 	const handleTouchStart = (e: React.TouchEvent) => {
-		// 핀치 줌 직후에는 터치 시작 무시 (확대 상태 유지)
-		if (wasPinching) {
-			return;
-		}
-
 		// 두 손가락 터치 = 핀치 줌
 		if (e.touches.length === 2) {
 			const distance = getTouchDistance(e.touches[0], e.touches[1]);
@@ -104,6 +99,26 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 			setWasPinching(true);
 			setTouchStart(null);
 			setIsDragging(false);
+			return;
+		}
+
+		// 핀치 줌 직후에는 한 손가락 터치 시작을 무시 (확대 상태 유지)
+		// 하지만 드래그는 허용 (확대된 상태에서 이미지 이동 가능)
+		if (wasPinching && scale > 1) {
+			// 확대된 상태에서 드래그는 허용
+			const touch = e.touches[0];
+			setTouchStart({ x: touch.clientX, y: touch.clientY });
+			setTouchHasMoved(false);
+			setIsDragging(true);
+			setHasDragged(false);
+			setDragStart({ x: touch.clientX - translate.x, y: touch.clientY - translate.y });
+			// 핀치 줌 플래그는 즉시 리셋 (드래그 모드로 전환)
+			setWasPinching(false);
+			return;
+		}
+
+		// 핀치 줌 직후 기본 상태에서의 터치는 무시 (확대 상태 유지)
+		if (wasPinching) {
 			return;
 		}
 
@@ -170,21 +185,26 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 				setIsDragging(true);
 				setHasDragged(false);
 				setDragStart({ x: touch.clientX - translate.x, y: touch.clientY - translate.y });
-				// 핀치 줌 플래그는 유지 (다음 터치 시작 시 무시하기 위해)
-				setTimeout(() => {
-					setWasPinching(false);
-				}, 500); // 500ms 후에만 터치 클릭으로 인식 가능
+				// 핀치 줌 플래그는 즉시 리셋 (드래그 모드로 전환되었으므로)
+				setWasPinching(false);
 			} else {
-				// 모든 손가락이 떼어졌으면 핀치 줌 플래그 유지 (일정 시간 후 리셋)
+				// 모든 손가락이 떼어졌으면 핀치 줌 플래그는 유지하되, 짧은 시간만
+				// 실제로는 핀치 줌 직후 터치 클릭이 발생하지 않도록 하기 위해
+				// 하지만 너무 오래 차단하면 다른 제스처가 안 되므로 짧게
 				setTimeout(() => {
 					setWasPinching(false);
-				}, 500); // 500ms 후에만 터치 클릭으로 인식 가능
+				}, 200); // 200ms로 단축 (핀치 줌 직후 터치 클릭만 차단)
 			}
 			return;
 		}
 
 		// 핀치 줌 직후에는 터치 종료도 무시 (확대 상태 유지)
+		// 하지만 너무 오래 차단하지 않음
 		if (wasPinching) {
+			// 짧은 시간 후 리셋
+			setTimeout(() => {
+				setWasPinching(false);
+			}, 100);
 			return;
 		}
 
@@ -326,9 +346,11 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	
 	const handleZoomClick = (targetScale: number) => {
 		setScale(targetScale);
-		if (targetScale === 1) {
-			setTranslate({ x: 0, y: 0 });
-		}
+		// scale 변경 시 translate도 초기화하여 위치 튀는 현상 방지
+		setTranslate({ x: 0, y: 0 });
+		// 핀치 줌 플래그도 초기화
+		setWasPinching(false);
+		setPinchStart(null);
 	};
 
 	return (
