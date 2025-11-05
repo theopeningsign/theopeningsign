@@ -83,7 +83,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	}, [scale, total]);
 
 	// 두 손가락 간 거리 계산 함수
-	const getTouchDistance = (touch1: Touch, touch2: Touch) => {
+	const getTouchDistance = (touch1: React.Touch, touch2: React.Touch) => {
 		const dx = touch2.clientX - touch1.clientX;
 		const dy = touch2.clientY - touch1.clientY;
 		return Math.sqrt(dx * dx + dy * dy);
