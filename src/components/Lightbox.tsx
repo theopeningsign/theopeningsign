@@ -91,18 +91,11 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 		return Math.sqrt(dx * dx + dy * dy);
 	};
 
-	// 터치 이벤트 핸들러 (드래그 및 핀치 줌)
+	// 터치 이벤트 핸들러 (드래그만, 핀치 비활성화)
 	const handleTouchStart = (e: React.TouchEvent) => {
 		setLastTouchAt(Date.now());
-		// 두 손가락 터치 = 핀치 줌
-		if (e.touches.length === 2) {
-			const distance = getTouchDistance(e.touches[0], e.touches[1]);
-			setPinchStart({ distance, scale });
-			setWasPinching(true);
-			setTouchStart(null); // 핀치 줌 중에는 touchStart를 null로 유지
-			setIsDragging(false);
-			return;
-		}
+		// 두 손가락 이상은 무시 (핀치 제거)
+		if (e.touches.length !== 1) return;
 
 		// 한 손가락 터치 = 드래그
 		const touch = e.touches[0];
@@ -120,15 +113,8 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 
 	const handleTouchMove = (e: React.TouchEvent) => {
 		setLastTouchAt(Date.now());
-		// 두 손가락 터치 = 핀치 줌
-		if (e.touches.length === 2 && pinchStart) {
-			e.preventDefault();
-			const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
-			const ratio = currentDistance / pinchStart.distance;
-			const newScale = Math.max(1, Math.min(3, pinchStart.scale * ratio));
-			setScale(newScale);
-			return;
-		}
+		// 두 손가락 이상은 무시 (핀치 제거)
+		if (e.touches.length !== 1) return;
 
 		// 한 손가락 터치 = 드래그
 		if (!touchStart || scale <= 1) return;
@@ -157,27 +143,8 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 		}
 	};
 
-	const handleTouchEnd = (e: React.TouchEvent) => {
+	const handleTouchEnd = () => {
 		setLastTouchAt(Date.now());
-		// 핀치 줌 종료
-		if (pinchStart) {
-			setPinchStart(null);
-			setWasPinching(false); // 핀치 줌 종료 시 즉시 플래그 리셋
-			// 핀치 줌 후에도 손가락이 남아있으면 드래그로 전환 가능
-			if (e.touches.length === 1 && scale > 1) {
-				const touch = e.touches[0];
-				setTouchStart({ x: touch.clientX, y: touch.clientY });
-				setIsDragging(true);
-				setHasDragged(false);
-				setDragStart({ x: touch.clientX - translate.x, y: touch.clientY - translate.y });
-			}
-			// 핀치 줌 종료 직후에는 touchStart가 null이므로 터치 클릭이 발생하지 않음
-			// 따라서 확대 상태가 유지됨
-			e.preventDefault();
-			e.stopPropagation();
-			return;
-		}
-
 		if (!touchStart) return;
 
 		setIsDragging(false);
@@ -384,16 +351,36 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 						>
 							200%
 						</button>
+						<button
+							onClick={() => handleZoomClick(2.5)}
+							className={`px-2 md:px-3 py-1 text-xs rounded transition-colors ${
+								scale === 2.5 
+									? 'bg-white/30 text-white font-semibold' 
+									: 'bg-white/10 text-white/80 hover:bg-white/20 active:bg-white/25'
+							}`}
+						>
+							250%
+						</button>
+						<button
+							onClick={() => handleZoomClick(3)}
+							className={`px-2 md:px-3 py-1 text-xs rounded transition-colors ${
+								scale === 3 
+									? 'bg-white/30 text-white font-semibold' 
+									: 'bg-white/10 text-white/80 hover:bg-white/20 active:bg-white/25'
+							}`}
+						>
+							300%
+						</button>
 					</div>
 				</div>
 
 				<div className="flex h-full items-center justify-center">
-					<div 
+			<div 
 						className={zoomed ? 'relative w-[96vw] h-[86vh]' : 'relative w-[80vw] max-w-5xl aspect-video'}
 						style={{ 
 							transform: `scale(${scale}) translate(${translate.x}px, ${translate.y}px)`, 
 							transformOrigin: 'center', 
-							transition: (isDragging || pinchStart) ? 'none' : (scale !== 1 ? 'transform 0.1s ease-out' : 'none'),
+					transition: isDragging ? 'none' : (scale !== 1 ? 'transform 0.1s ease-out' : 'none'),
 							cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : (zoomed ? 'zoom-out' : 'zoom-in'),
 							touchAction: 'none' // 기본 브라우저 핀치 줌 방지, 우리가 직접 구현
 						}}
