@@ -22,6 +22,8 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	// 터치 이벤트용
 	const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
 	const [touchHasMoved, setTouchHasMoved] = useState(false);
+	// 핀치 줌용
+	const [pinchStart, setPinchStart] = useState<{ distance: number; scale: number } | null>(null);
 	const total = images.length;
 	const current = useMemo(() => images[index], [images, index]);
 
@@ -80,11 +82,29 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 		return () => window.removeEventListener('wheel', onWheel);
 	}, [scale, total]);
 
-	// 터치 이벤트 핸들러 (드래그)
+	// 두 손가락 간 거리 계산 함수
+	const getTouchDistance = (touch1: Touch, touch2: Touch) => {
+		const dx = touch2.clientX - touch1.clientX;
+		const dy = touch2.clientY - touch1.clientY;
+		return Math.sqrt(dx * dx + dy * dy);
+	};
+
+	// 터치 이벤트 핸들러 (드래그 및 핀치 줌)
 	const handleTouchStart = (e: React.TouchEvent) => {
+		// 두 손가락 터치 = 핀치 줌
+		if (e.touches.length === 2) {
+			const distance = getTouchDistance(e.touches[0], e.touches[1]);
+			setPinchStart({ distance, scale });
+			setTouchStart(null);
+			setIsDragging(false);
+			return;
+		}
+
+		// 한 손가락 터치 = 드래그
 		const touch = e.touches[0];
 		setTouchStart({ x: touch.clientX, y: touch.clientY });
 		setTouchHasMoved(false);
+		setPinchStart(null);
 		
 		// 확대된 상태일 때만 드래그 시작
 		if (scale > 1) {
@@ -95,6 +115,17 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	};
 
 	const handleTouchMove = (e: React.TouchEvent) => {
+		// 두 손가락 터치 = 핀치 줌
+		if (e.touches.length === 2 && pinchStart) {
+			e.preventDefault();
+			const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
+			const ratio = currentDistance / pinchStart.distance;
+			const newScale = Math.max(0.5, Math.min(3, pinchStart.scale * ratio));
+			setScale(newScale);
+			return;
+		}
+
+		// 한 손가락 터치 = 드래그
 		if (!touchStart || scale <= 1) return;
 		
 		const touch = e.touches[0];
@@ -122,6 +153,20 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	};
 
 	const handleTouchEnd = (e: React.TouchEvent) => {
+		// 핀치 줌 종료
+		if (pinchStart) {
+			setPinchStart(null);
+			// 핀치 줌 후에도 손가락이 남아있으면 드래그로 전환 가능
+			if (e.touches.length === 1 && scale > 1) {
+				const touch = e.touches[0];
+				setTouchStart({ x: touch.clientX, y: touch.clientY });
+				setIsDragging(true);
+				setHasDragged(false);
+				setDragStart({ x: touch.clientX - translate.x, y: touch.clientY - translate.y });
+			}
+			return;
+		}
+
 		if (!touchStart) return;
 
 		setIsDragging(false);
@@ -327,9 +372,9 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 						style={{ 
 							transform: `scale(${scale}) translate(${translate.x}px, ${translate.y}px)`, 
 							transformOrigin: 'center', 
-							transition: isDragging ? 'none' : (scale !== 1 ? 'transform 0.1s ease-out' : 'none'),
+							transition: (isDragging || pinchStart) ? 'none' : (scale !== 1 ? 'transform 0.1s ease-out' : 'none'),
 							cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : (zoomed ? 'zoom-out' : 'zoom-in'),
-							touchAction: scale > 1 ? 'pan-x pan-y' : 'none'
+							touchAction: 'none' // 기본 브라우저 핀치 줌 방지, 우리가 직접 구현
 						}}
 						onMouseDown={handleMouseDown}
 						onMouseMove={handleMouseMove}

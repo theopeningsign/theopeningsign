@@ -1,7 +1,7 @@
 import PortfolioCard from '@/components/PortfolioCard';
 import { getPortfolios } from '@/lib/notion';
 
-export const revalidate = 1800;
+export const revalidate = 60;
 
 export default async function PortfolioPage() {
 	const items = await getPortfolios();
