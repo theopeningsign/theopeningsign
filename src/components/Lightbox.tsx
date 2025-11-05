@@ -63,7 +63,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 			if (e.ctrlKey || e.metaKey) {
 				e.preventDefault();
 				const delta = e.deltaY > 0 ? -0.1 : 0.1;
-				setScale((prev) => Math.max(0.5, Math.min(3, prev + delta)));
+				setScale((prev) => Math.max(1, Math.min(3, prev + delta)));
 				return;
 			}
 
@@ -97,28 +97,8 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 			const distance = getTouchDistance(e.touches[0], e.touches[1]);
 			setPinchStart({ distance, scale });
 			setWasPinching(true);
-			setTouchStart(null);
+			setTouchStart(null); // 핀치 줌 중에는 touchStart를 null로 유지
 			setIsDragging(false);
-			return;
-		}
-
-		// 핀치 줌 직후에는 한 손가락 터치 시작을 무시 (확대 상태 유지)
-		// 하지만 드래그는 허용 (확대된 상태에서 이미지 이동 가능)
-		if (wasPinching && scale > 1) {
-			// 확대된 상태에서 드래그는 허용
-			const touch = e.touches[0];
-			setTouchStart({ x: touch.clientX, y: touch.clientY });
-			setTouchHasMoved(false);
-			setIsDragging(true);
-			setHasDragged(false);
-			setDragStart({ x: touch.clientX - translate.x, y: touch.clientY - translate.y });
-			// 핀치 줌 플래그는 즉시 리셋 (드래그 모드로 전환)
-			setWasPinching(false);
-			return;
-		}
-
-		// 핀치 줌 직후 기본 상태에서의 터치는 무시 (확대 상태 유지)
-		if (wasPinching) {
 			return;
 		}
 
@@ -142,7 +122,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 			e.preventDefault();
 			const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
 			const ratio = currentDistance / pinchStart.distance;
-			const newScale = Math.max(0.5, Math.min(3, pinchStart.scale * ratio));
+			const newScale = Math.max(1, Math.min(3, pinchStart.scale * ratio));
 			setScale(newScale);
 			return;
 		}
@@ -178,6 +158,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 		// 핀치 줌 종료
 		if (pinchStart) {
 			setPinchStart(null);
+			setWasPinching(false); // 핀치 줌 종료 시 즉시 플래그 리셋
 			// 핀치 줌 후에도 손가락이 남아있으면 드래그로 전환 가능
 			if (e.touches.length === 1 && scale > 1) {
 				const touch = e.touches[0];
@@ -185,26 +166,9 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 				setIsDragging(true);
 				setHasDragged(false);
 				setDragStart({ x: touch.clientX - translate.x, y: touch.clientY - translate.y });
-				// 핀치 줌 플래그는 즉시 리셋 (드래그 모드로 전환되었으므로)
-				setWasPinching(false);
-			} else {
-				// 모든 손가락이 떼어졌으면 핀치 줌 플래그는 유지하되, 짧은 시간만
-				// 실제로는 핀치 줌 직후 터치 클릭이 발생하지 않도록 하기 위해
-				// 하지만 너무 오래 차단하면 다른 제스처가 안 되므로 짧게
-				setTimeout(() => {
-					setWasPinching(false);
-				}, 200); // 200ms로 단축 (핀치 줌 직후 터치 클릭만 차단)
 			}
-			return;
-		}
-
-		// 핀치 줌 직후에는 터치 종료도 무시 (확대 상태 유지)
-		// 하지만 너무 오래 차단하지 않음
-		if (wasPinching) {
-			// 짧은 시간 후 리셋
-			setTimeout(() => {
-				setWasPinching(false);
-			}, 100);
+			// 핀치 줌 종료 직후에는 touchStart가 null이므로 터치 클릭이 발생하지 않음
+			// 따라서 확대 상태가 유지됨
 			return;
 		}
 
@@ -223,6 +187,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 		}
 
 		// 확대 상태에서 터치 클릭 (드래그가 없었을 때만)
+		// 핀치 줌 직후에는 touchStart가 null이므로 이 조건에 걸리지 않음
 		if (scale > 1 && !touchHasMoved && !hasDragged) {
 			setScale(1);
 			setTranslate({ x: 0, y: 0 });
@@ -348,6 +313,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 		setScale(targetScale);
 		// scale 변경 시 translate도 초기화하여 위치 튀는 현상 방지
 		setTranslate({ x: 0, y: 0 });
+		setZoomed(true);
 		// 핀치 줌 플래그도 초기화
 		setWasPinching(false);
 		setPinchStart(null);
