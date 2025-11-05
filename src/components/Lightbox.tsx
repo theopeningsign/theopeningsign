@@ -25,6 +25,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	// 핀치 줌용
 	const [pinchStart, setPinchStart] = useState<{ distance: number; scale: number } | null>(null);
 	const [wasPinching, setWasPinching] = useState(false); // 핀치 줌이 있었는지 추적
+	const [lastTouchAt, setLastTouchAt] = useState(0); // 최근 터치 시간 (click 무시용)
 	const total = images.length;
 	const current = useMemo(() => images[index], [images, index]);
 
@@ -92,6 +93,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 
 	// 터치 이벤트 핸들러 (드래그 및 핀치 줌)
 	const handleTouchStart = (e: React.TouchEvent) => {
+		setLastTouchAt(Date.now());
 		// 두 손가락 터치 = 핀치 줌
 		if (e.touches.length === 2) {
 			const distance = getTouchDistance(e.touches[0], e.touches[1]);
@@ -117,6 +119,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	};
 
 	const handleTouchMove = (e: React.TouchEvent) => {
+		setLastTouchAt(Date.now());
 		// 두 손가락 터치 = 핀치 줌
 		if (e.touches.length === 2 && pinchStart) {
 			e.preventDefault();
@@ -155,6 +158,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	};
 
 	const handleTouchEnd = (e: React.TouchEvent) => {
+		setLastTouchAt(Date.now());
 		// 핀치 줌 종료
 		if (pinchStart) {
 			setPinchStart(null);
@@ -169,6 +173,8 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 			}
 			// 핀치 줌 종료 직후에는 touchStart가 null이므로 터치 클릭이 발생하지 않음
 			// 따라서 확대 상태가 유지됨
+			e.preventDefault();
+			e.stopPropagation();
 			return;
 		}
 
@@ -218,6 +224,12 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	};
 
 	const handleClick = (e: React.MouseEvent) => {
+		// 최근 터치(모바일) 직후 발생하는 합성 click 무시
+		if (Date.now() - lastTouchAt < 600) {
+			e.preventDefault();
+			e.stopPropagation();
+			return;
+		}
 		// 실제로 드래그가 발생했으면 클릭으로 간주하지 않음
 		if (hasDragged || isDragging) {
 			e.preventDefault();
