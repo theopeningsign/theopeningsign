@@ -10,51 +10,51 @@ export default function ScrollRestoration() {
 	useEffect(() => {
 		// 포트폴리오 목록 페이지에서만 스크롤 위치 저장/복원
 		if (pathname === '/portfolio') {
+			// 스크롤 복원 함수 (여러 곳에서 사용)
+			const tryRestore = () => {
+				const savedCardId = sessionStorage.getItem('portfolioCardId');
+				const savedCardTop = sessionStorage.getItem('portfolioCardTop');
+				const savedScrollPosition = sessionStorage.getItem('portfolioScrollPosition');
+				
+				// 카드 ID로 복원 시도
+				if (savedCardId) {
+					const cardElement = document.querySelector(`[data-portfolio-id="${savedCardId}"]`);
+					if (cardElement) {
+						const rect = cardElement.getBoundingClientRect();
+						const scrollTop = window.scrollY || document.documentElement.scrollTop;
+						const cardTop = rect.top + scrollTop;
+						const headerOffset = 80;
+						const targetPosition = Math.max(0, cardTop - headerOffset);
+						
+						window.scrollTo({
+							top: targetPosition,
+							behavior: 'instant' as ScrollBehavior
+						});
+						return; // 성공했으면 더 이상 시도하지 않음
+					}
+				}
+				
+				// 카드를 찾지 못했으면 저장된 스크롤 위치로 복원
+				if (savedScrollPosition) {
+					const targetPosition = parseInt(savedScrollPosition, 10);
+					const currentHeight = document.documentElement.scrollHeight;
+					const viewportHeight = window.innerHeight;
+					const maxScroll = Math.max(0, currentHeight - viewportHeight);
+					const finalPosition = Math.min(targetPosition, maxScroll);
+					
+					window.scrollTo({
+						top: finalPosition,
+						behavior: 'instant' as ScrollBehavior
+					});
+				}
+			};
+
 			// 저장된 위치가 있고 아직 복원하지 않았으면 복원 시도
 			const savedCardId = sessionStorage.getItem('portfolioCardId');
 			const savedScrollPosition = sessionStorage.getItem('portfolioScrollPosition');
 			
 			if ((savedCardId || savedScrollPosition) && !hasRestored.current) {
 				hasRestored.current = true;
-				
-				// 여러 번 시도하여 이미지 로드 후 레이아웃 변경에 대응
-				const tryRestore = () => {
-					const savedCardId = sessionStorage.getItem('portfolioCardId');
-					const savedCardTop = sessionStorage.getItem('portfolioCardTop');
-					const savedScrollPosition = sessionStorage.getItem('portfolioScrollPosition');
-					
-					// 카드 ID로 복원 시도
-					if (savedCardId) {
-						const cardElement = document.querySelector(`[data-portfolio-id="${savedCardId}"]`);
-						if (cardElement) {
-							const rect = cardElement.getBoundingClientRect();
-							const scrollTop = window.scrollY || document.documentElement.scrollTop;
-							const cardTop = rect.top + scrollTop;
-							const headerOffset = 80;
-							const targetPosition = Math.max(0, cardTop - headerOffset);
-							
-							window.scrollTo({
-								top: targetPosition,
-								behavior: 'instant' as ScrollBehavior
-							});
-							return; // 성공했으면 더 이상 시도하지 않음
-						}
-					}
-					
-					// 카드를 찾지 못했으면 저장된 스크롤 위치로 복원
-					if (savedScrollPosition) {
-						const targetPosition = parseInt(savedScrollPosition, 10);
-						const currentHeight = document.documentElement.scrollHeight;
-						const viewportHeight = window.innerHeight;
-						const maxScroll = Math.max(0, currentHeight - viewportHeight);
-						const finalPosition = Math.min(targetPosition, maxScroll);
-						
-						window.scrollTo({
-							top: finalPosition,
-							behavior: 'instant' as ScrollBehavior
-						});
-					}
-				};
 
 				// 여러 번 시도
 				const attemptRestore = () => {
