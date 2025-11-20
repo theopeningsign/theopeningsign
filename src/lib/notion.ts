@@ -67,6 +67,13 @@ async function notionRetrievePage(pageId: string) {
     return res.json();
 }
 
+// HEIC 파일 확장자 확인 (export for use in other files)
+export function isHeicFile(url: string): boolean {
+	if (!url) return false;
+	const lowerUrl = url.toLowerCase();
+	return lowerUrl.includes('.heic') || lowerUrl.includes('.heif');
+}
+
 // URL 정규화: Notion 이미지 URL을 안전하게 처리
 function normalizeImageUrl(url: string | undefined): string | undefined {
 	if (!url || typeof url !== 'string') return undefined;
@@ -75,6 +82,12 @@ function normalizeImageUrl(url: string | undefined): string | undefined {
 	if (!url.startsWith('http://') && !url.startsWith('https://')) {
 		// 상대 경로나 잘못된 형식
 		return undefined;
+	}
+	
+	// HEIC 파일 감지 및 경고
+	if (isHeicFile(url)) {
+		console.warn('[Notion] HEIC 파일 감지 (웹 브라우저 미지원):', url);
+		// HEIC 파일도 반환하되, 클라이언트에서 처리하도록 함
 	}
 	
 	// Notion 이미지 URL에서 불필요한 파라미터 제거 (선택적)

@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useState } from 'react';
 import Lightbox from '@/components/Lightbox';
+import { isHeicFile } from '@/lib/notion';
 
 interface Props {
     cover?: string;
@@ -36,6 +37,7 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                 fill
                 className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                 priority
+                unoptimized={cover ? isHeicFile(cover) : false} // HEIC 파일은 최적화 비활성화
             />
             <button
                 type="button"

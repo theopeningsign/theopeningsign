@@ -5,6 +5,7 @@ import { useState, useEffect, memo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { PortfolioItem } from '@/lib/types';
+import { isHeicFile } from '@/lib/notion';
 
 interface Props {
 	item: PortfolioItem;
@@ -53,7 +54,7 @@ function PortfolioCard({ item, priority = false }: Props) {
 					blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMTAwJScgaGVpZ2h0PScxMDAlJyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnLz4="
 					onError={handleImageError}
 					onLoad={handleImageLoad}
-					unoptimized={imgError} // 에러 시 최적화 비활성화
+					unoptimized={imgError || (item.coverImageUrl ? isHeicFile(item.coverImageUrl) : false)} // HEIC 파일 또는 에러 시 최적화 비활성화
 					priority={priority} // 첫 화면에 보이는 이미지만 priority
 					loading={priority ? undefined : 'lazy'} // priority가 아닌 경우 lazy loading
 				/>
