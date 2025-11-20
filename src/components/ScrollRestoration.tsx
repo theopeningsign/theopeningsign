@@ -8,6 +8,32 @@ export default function ScrollRestoration() {
 	const hasRestored = useRef(false);
 
 	useEffect(() => {
+		// 포트폴리오 상세 페이지에서 reloadScrollPosition 복원 (이미지 로드 실패로 인한 새로고침)
+		if (pathname?.startsWith('/portfolio/') && pathname !== '/portfolio') {
+			const reloadScrollPosition = sessionStorage.getItem('reloadScrollPosition');
+			if (reloadScrollPosition) {
+				const targetPosition = parseInt(reloadScrollPosition, 10);
+				// 여러 번 시도하여 이미지 로드 후 레이아웃 변경에 대응
+				const attemptRestore = () => {
+					window.scrollTo({
+						top: targetPosition,
+						behavior: 'instant' as ScrollBehavior
+					});
+				};
+				
+				// 즉시 복원 시도
+				attemptRestore();
+				requestAnimationFrame(() => {
+					attemptRestore();
+					setTimeout(() => {
+						attemptRestore();
+						// 복원 후 세션 스토리지 정리
+						sessionStorage.removeItem('reloadScrollPosition');
+					}, 500);
+				});
+			}
+		}
+		
 		// 포트폴리오 목록 페이지에서만 스크롤 위치 저장/복원
 		if (pathname === '/portfolio') {
 			// 스크롤 복원 함수 (여러 곳에서 사용)
@@ -50,10 +76,12 @@ export default function ScrollRestoration() {
 			};
 
 			// 저장된 위치가 있고 아직 복원하지 않았으면 복원 시도
+			// 단, 뒤로가기로 들어온 경우에만 복원 (shouldRestoreScroll 플래그 확인)
+			const shouldRestore = sessionStorage.getItem('shouldRestoreScroll') === 'true';
 			const savedCardId = sessionStorage.getItem('portfolioCardId');
 			const savedScrollPosition = sessionStorage.getItem('portfolioScrollPosition');
 			
-			if ((savedCardId || savedScrollPosition) && !hasRestored.current) {
+			if (shouldRestore && (savedCardId || savedScrollPosition) && !hasRestored.current) {
 				hasRestored.current = true;
 
 				// 여러 번 시도
@@ -70,6 +98,7 @@ export default function ScrollRestoration() {
 									sessionStorage.removeItem('portfolioCardId');
 									sessionStorage.removeItem('portfolioCardTop');
 									sessionStorage.removeItem('portfolioScrollPosition');
+									sessionStorage.removeItem('shouldRestoreScroll'); // 플래그도 제거
 								}, 100);
 							}, 500);
 						}, 200);
@@ -88,16 +117,20 @@ export default function ScrollRestoration() {
 			// 모바일 브라우저의 bfcache(뒤로가기 캐시) 대응
 			const handlePageshow = (e: PageTransitionEvent) => {
 				if (e.persisted) {
-					hasRestored.current = false;
-					const savedCardId = sessionStorage.getItem('portfolioCardId');
-					const savedScrollPosition = sessionStorage.getItem('portfolioScrollPosition');
-					
-					if (savedCardId || savedScrollPosition) {
-						setTimeout(() => {
-							tryRestore();
-							setTimeout(() => tryRestore(), 100);
-							setTimeout(() => tryRestore(), 300);
-						}, 50);
+					// 뒤로가기로 들어온 경우에만 복원
+					const shouldRestore = sessionStorage.getItem('shouldRestoreScroll') === 'true';
+					if (shouldRestore) {
+						hasRestored.current = false;
+						const savedCardId = sessionStorage.getItem('portfolioCardId');
+						const savedScrollPosition = sessionStorage.getItem('portfolioScrollPosition');
+						
+						if (savedCardId || savedScrollPosition) {
+							setTimeout(() => {
+								tryRestore();
+								setTimeout(() => tryRestore(), 100);
+								setTimeout(() => tryRestore(), 300);
+							}, 50);
+						}
 					}
 				}
 			};

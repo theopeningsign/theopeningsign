@@ -7,11 +7,9 @@ import Gallery from '@/components/Gallery';
 import type { Metadata } from 'next';
 import HeroLightbox from '@/components/HeroLightbox';
 import BackButton from '@/components/BackButton';
-import AutoRefresh from '@/components/AutoRefresh';
 import ScrollToTop from '@/components/ScrollToTop';
 
-export const revalidate = 300; // 5분 캐시 (첫 방문 후 매우 빠름)
-export const dynamic = 'force-dynamic';
+export const revalidate = 60; // 1분 캐시 (정상 로드 시 빠름, 이미지 실패 시 자동 새로고침)
 
 type MaybePromise<T> = T | Promise<T>;
 interface Props {
@@ -27,7 +25,6 @@ export default async function PortfolioDetailPage({ params }: Props) {
 	return (
 		<div className="space-y-8">
 			<ScrollToTop />
-			<AutoRefresh />
 			<BackButton />
 			<header className="space-y-1">
 				<h1 className="text-3xl font-extrabold text-slate-900">{item.title}</h1>

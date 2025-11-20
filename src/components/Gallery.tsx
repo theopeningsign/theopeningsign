@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useState, useRef, memo, useEffect } from 'react';
 import Lightbox from '@/components/Lightbox';
 import { isNotionImageUrl } from '@/lib/notion';
+import { scheduleImageReload, clearImageReloadFlag } from '@/lib/imageReload';
 
 interface Props {
 	images: string[]; // 보조 이미지들
@@ -48,6 +49,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt }: { src: str
 			setImgError(false);
 			hasLoadedRef.current = true;
 		}
+		clearImageReloadFlag(src ? `img_error_${src}` : '');
 	};
 
 	const handleError = () => {
@@ -55,6 +57,10 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt }: { src: str
 			setImgError(true);
 			setImgLoading(false);
 			hasLoadedRef.current = true;
+
+			if (src) {
+				scheduleImageReload(`img_error_${src}`);
+			}
 		}
 	};
 
@@ -77,6 +83,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt }: { src: str
 						setImgLoading(false);
 						hasLoadedRef.current = true;
 					}
+					clearImageReloadFlag(src ? `img_error_${src}` : '');
 				}}
 			/>
 		</>

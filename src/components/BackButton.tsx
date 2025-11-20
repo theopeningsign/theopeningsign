@@ -24,6 +24,8 @@ export default function BackButton() {
 		e.preventDefault();
 		e.stopPropagation(); // 이벤트 전파 방지 (이미지 클릭 방지)
 		e.nativeEvent.stopImmediatePropagation(); // 즉시 전파 중지
+		// 뒤로가기 플래그 설정 (스크롤 복원을 위해)
+		sessionStorage.setItem('shouldRestoreScroll', 'true');
 		// 현재 스크롤 위치 저장 (상세 페이지에서)
 		sessionStorage.setItem('portfolioScrollPosition', window.scrollY.toString());
 		router.push('/portfolio');

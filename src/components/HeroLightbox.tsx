@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import Lightbox from '@/components/Lightbox';
 import { isNotionImageUrl } from '@/lib/notion';
+import { scheduleImageReload, clearImageReloadFlag } from '@/lib/imageReload';
 
 interface Props {
     cover?: string;
@@ -123,6 +124,11 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                             setImgError(true);
                             setImgLoading(false);
                             hasLoadedRef.current = true;
+
+                            const errorKey = cover ? `img_error_${cover}` : '';
+                            if (errorKey) {
+                                scheduleImageReload(errorKey);
+                            }
                         }
                     }}
                     onLoadingComplete={() => {
@@ -132,6 +138,10 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                             }
                             setImgLoading(false);
                             hasLoadedRef.current = true;
+                        }
+                        const errorKey = cover ? `img_error_${cover}` : '';
+                        if (errorKey) {
+                            clearImageReloadFlag(errorKey);
                         }
                     }}
                 />

@@ -1,7 +1,7 @@
 import PortfolioCard from '@/components/PortfolioCard';
 import { getPortfolios } from '@/lib/notion';
 
-export const revalidate = 300; // 5분 캐시 (첫 방문 후 매우 빠름)
+export const revalidate = 60; // 1분 캐시 (정상 로드 시 빠름, 이미지 실패 시 자동 새로고침)
 
 export default async function PortfolioPage() {
 	const items = await getPortfolios();
@@ -13,7 +13,7 @@ export default async function PortfolioPage() {
 					<PortfolioCard 
 						key={item.id} 
 						item={item} 
-						priority={index < 9} // 첫 9개 priority (첫 화면에 보이는 이미지 + 여유)
+						priority={index < 15} // 첫 15개 priority (더 많은 이미지 미리 로드)
 					/>
 				))}
 				{items.length === 0 && (
