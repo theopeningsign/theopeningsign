@@ -3,6 +3,7 @@ import { Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ScrollRestoration from "@/components/ScrollRestoration";
 
 const notoSans = Noto_Sans_KR({
   variable: "--font-noto-sans-kr",
@@ -45,6 +46,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://prod-files-secure.s3.us-west-2.amazonaws.com" />
       </head>
       <body className={`${notoSans.variable} antialiased bg-white text-slate-800`}>
+        <ScrollRestoration />
         <Header />
         <main className="mx-auto min-h-[70vh] max-w-6xl px-4 py-8">{children}</main>
         <Footer />

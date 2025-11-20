@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function BackButton() {
 	const [isScrolled, setIsScrolled] = useState(false);
+	const router = useRouter();
 
 	useEffect(() => {
 		const handleScroll = () => {
@@ -18,22 +20,45 @@ export default function BackButton() {
 		return () => window.removeEventListener('scroll', handleScroll);
 	}, []);
 
+	const handleBack = (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation(); // 이벤트 전파 방지 (이미지 클릭 방지)
+		e.nativeEvent.stopImmediatePropagation(); // 즉시 전파 중지
+		// 현재 스크롤 위치 저장 (상세 페이지에서)
+		sessionStorage.setItem('portfolioScrollPosition', window.scrollY.toString());
+		router.push('/portfolio');
+	};
+
 	return (
 		<>
 			{/* 원래 위치의 뒤로가기 버튼 (스크롤 전에 보이는 버튼) */}
 			<Link 
 				href="/portfolio" 
+				onClick={handleBack}
 				className={`inline-flex items-center gap-1 text-base md:text-lg font-medium text-blue-800 hover:underline mb-3 transition-opacity duration-200 ${isScrolled ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
 			>
 				← 뒤로가기
 			</Link>
 			{/* 고정 뒤로가기 버튼 (스크롤 시 왼쪽에 표시) */}
-			<Link 
-				href="/portfolio" 
-				className={`fixed left-4 top-20 z-10 inline-flex items-center gap-1 rounded-md bg-white/90 backdrop-blur-sm px-3 py-2 text-base md:text-lg font-medium text-blue-800 shadow-md hover:bg-white hover:shadow-lg transition-all duration-200 ${isScrolled ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-full pointer-events-none'}`}
+			<button
+				type="button"
+				onClick={handleBack}
+				onMouseDown={(e) => {
+					e.preventDefault();
+					e.stopPropagation();
+				}}
+				onTouchStart={(e) => {
+					e.stopPropagation();
+				}}
+				className={`fixed left-4 top-20 z-[100] inline-flex items-center gap-1 rounded-md bg-white/95 backdrop-blur-sm px-3 py-2 text-base md:text-lg font-medium text-blue-800 shadow-lg hover:bg-white hover:shadow-xl transition-all duration-200 ${isScrolled ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-full pointer-events-none'}`}
+				style={{ 
+					touchAction: 'manipulation',
+					position: 'fixed',
+					zIndex: 100
+				}}
 			>
 				← 뒤로가기
-			</Link>
+			</button>
 		</>
 	);
 }

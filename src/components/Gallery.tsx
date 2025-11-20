@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useRef, memo, useEffect } from 'react';
 import Lightbox from '@/components/Lightbox';
 import { isNotionImageUrl } from '@/lib/notion';
 
@@ -10,6 +10,78 @@ interface Props {
 	covers?: string[]; // 메인 이미지들 (여러 장)
 	cover?: string; // 단일 메인 이미지
 }
+
+// 개별 이미지 컴포넌트
+const GalleryImageItem = memo(function GalleryImageItem({ src, alt }: { src: string; alt: string }) {
+	const [imgLoading, setImgLoading] = useState(true);
+	const [imgError, setImgError] = useState(false);
+	const hasLoadedRef = useRef(false);
+	const prevSrcRef = useRef<string | undefined>(src);
+
+	useEffect(() => {
+		if (prevSrcRef.current !== src) {
+			prevSrcRef.current = src;
+			setImgLoading(true);
+			setImgError(false);
+			hasLoadedRef.current = false;
+		}
+	}, [src]);
+
+	// 초기 마운트 시 이미지가 이미 로드되었는지 확인 (캐시된 이미지 대응)
+	useEffect(() => {
+		if (src && !hasLoadedRef.current) {
+			// 최후의 안전장치: 일정 시간 후에도 로드되지 않으면 강제로 보이게 함
+			const forceShowTimeout = setTimeout(() => {
+				if (!hasLoadedRef.current && !imgError) {
+					setImgLoading(false);
+					hasLoadedRef.current = true;
+				}
+			}, 500); // 500ms 후 강제로 보이게 함
+
+			return () => clearTimeout(forceShowTimeout);
+		}
+	}, [src, imgError]);
+
+	const handleLoad = () => {
+		if (!hasLoadedRef.current) {
+			setImgLoading(false);
+			setImgError(false);
+			hasLoadedRef.current = true;
+		}
+	};
+
+	const handleError = () => {
+		if (!hasLoadedRef.current) {
+			setImgError(true);
+			setImgLoading(false);
+			hasLoadedRef.current = true;
+		}
+	};
+
+	return (
+		<>
+			{imgLoading && !hasLoadedRef.current && (
+				<div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
+			)}
+			<Image 
+				src={imgError ? '/placeholder.svg' : (src || '/placeholder.svg')} 
+				alt={alt} 
+				fill 
+				className={`object-cover transition-transform group-hover:scale-[1.03] ${hasLoadedRef.current ? 'opacity-100' : (imgLoading ? 'opacity-0' : 'opacity-100')} ${hasLoadedRef.current ? '' : 'transition-opacity duration-200'}`}
+				unoptimized={src ? isNotionImageUrl(src) : false}
+				loading="lazy"
+				onLoad={handleLoad}
+				onError={handleError}
+				onLoadingComplete={() => {
+					if (!hasLoadedRef.current) {
+						setImgLoading(false);
+						hasLoadedRef.current = true;
+					}
+				}}
+			/>
+		</>
+	);
+}, (prevProps, nextProps) => prevProps.src === nextProps.src);
 
 export default function Gallery({ images, covers, cover }: Props) {
 	const [open, setOpen] = useState(false);
@@ -37,12 +109,9 @@ export default function Gallery({ images, covers, cover }: Props) {
 			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{images.map((src, i) => (
 					<button key={i} className="group relative aspect-[4/3] overflow-hidden rounded-lg border" onClick={() => handleImageClick(i)}>
-						<Image 
+						<GalleryImageItem 
 							src={src || '/placeholder.svg'} 
 							alt={`추가 이미지 ${i+1}`} 
-							fill 
-							className="object-cover transition-transform group-hover:scale-[1.03]"
-							unoptimized={src ? isNotionImageUrl(src) : false} // Notion 이미지만 최적화 비활성화 (Vercel Cache Writes 초과 방지)
 						/>
 					</button>
 				))}

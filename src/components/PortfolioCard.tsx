@@ -1,7 +1,7 @@
 // 포트폴리오 카드 컴포넌트
 "use client";
 
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { PortfolioItem } from '@/lib/types';
@@ -15,41 +15,69 @@ interface Props {
 function PortfolioCard({ item, priority = false }: Props) {
 	const [imgError, setImgError] = useState(false);
 	const [imgLoading, setImgLoading] = useState(true);
+	const hasLoadedRef = useRef(false); // 이미지가 한 번 로드되었는지 추적
 
 	const handleImageError = () => {
 		// 이미지 로드 실패 시 바로 placeholder로 전환
 		setImgError(true);
 		setImgLoading(false);
+		hasLoadedRef.current = true; // 에러가 나도 로드 시도는 완료된 것으로 간주
 	};
 
 	const handleImageLoad = () => {
-		setImgLoading(false);
-		setImgError(false);
+		// 이미지가 한 번 로드되면 영구적으로 로딩 완료 상태 유지
+		if (!hasLoadedRef.current) {
+			setImgLoading(false);
+			setImgError(false);
+			hasLoadedRef.current = true;
+		}
 	};
 
 	// 이미지 URL이 변경되면 상태 리셋
+	const prevUrlRef = useRef<string | undefined>(item.coverImageUrl);
 	useEffect(() => {
-		setImgError(false);
-		setImgLoading(true);
+		// URL이 실제로 변경된 경우에만 리셋
+		if (prevUrlRef.current !== item.coverImageUrl) {
+			prevUrlRef.current = item.coverImageUrl;
+			setImgError(false);
+			setImgLoading(true);
+			hasLoadedRef.current = false;
+		}
 	}, [item.coverImageUrl]);
 
 	// 상세 페이지로는 Notion 원본 page.id를 그대로 전달 (하이픈 포함)
 	const href = item.id ? `/portfolio/${encodeURIComponent(item.id)}` : '#';
+	
+	// 클릭 시 현재 카드의 위치와 스크롤 위치 저장
+	const handleClick = (e: React.MouseEvent) => {
+		const cardElement = e.currentTarget;
+		const rect = cardElement.getBoundingClientRect();
+		const scrollTop = window.scrollY || document.documentElement.scrollTop;
+		const cardTop = rect.top + scrollTop;
+		
+		// 카드의 상단 위치와 현재 스크롤 위치 모두 저장
+		sessionStorage.setItem('portfolioScrollPosition', scrollTop.toString());
+		sessionStorage.setItem('portfolioCardId', item.id);
+		sessionStorage.setItem('portfolioCardTop', cardTop.toString());
+	};
+
 	return (
 		<Link
 			href={href}
+			onClick={handleClick}
+			data-portfolio-id={item.id}
 			className="group block overflow-hidden rounded-xl border bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
 			style={{ borderColor: '#FAD2BE' }}
 		>
 			<div className="relative aspect-[4/3] w-full">
-				{imgLoading && (
+				{imgLoading && !hasLoadedRef.current && (
 					<div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
 				)}
 				<Image
 					src={imgError ? '/placeholder.svg' : (item.coverImageUrl || '/placeholder.svg')}
 					alt={item.title}
 					fill
-					className={`object-cover transition-opacity duration-300 ${imgLoading ? 'opacity-0' : 'opacity-100'}`}
+					className={`object-cover ${hasLoadedRef.current ? 'opacity-100' : (imgLoading ? 'opacity-0' : 'opacity-100')} ${hasLoadedRef.current ? '' : 'transition-opacity duration-200'}`}
 					placeholder="blur"
 					blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMTAwJScgaGVpZ2h0PScxMDAlJyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnLz4="
 					onError={handleImageError}
@@ -57,6 +85,7 @@ function PortfolioCard({ item, priority = false }: Props) {
 					unoptimized={imgError || (item.coverImageUrl ? isNotionImageUrl(item.coverImageUrl) : false)} // Notion 이미지만 최적화 비활성화 (Vercel Cache Writes 초과 방지)
 					priority={priority} // 첫 화면에 보이는 이미지만 priority
 					loading={priority ? undefined : 'lazy'} // priority가 아닌 경우 lazy loading
+					sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" // 반응형 이미지 크기 힌트
 				/>
 				<div className="absolute inset-0 bg-slate-900/0 transition-colors group-hover:bg-slate-900/20" />
 				<div className="absolute inset-x-0 bottom-0 translate-y-2 px-3 pb-3 opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100">
