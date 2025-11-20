@@ -67,21 +67,78 @@ async function notionRetrievePage(pageId: string) {
     return res.json();
 }
 
-// 파일 속성에서 첫 번째 파일 URL을 추출
+// URL 정규화: Notion 이미지 URL을 안전하게 처리
+function normalizeImageUrl(url: string | undefined): string | undefined {
+	if (!url || typeof url !== 'string') return undefined;
+	
+	// URL이 유효한지 확인
+	if (!url.startsWith('http://') && !url.startsWith('https://')) {
+		// 상대 경로나 잘못된 형식
+		return undefined;
+	}
+	
+	// Notion 이미지 URL에서 불필요한 파라미터 제거 (선택적)
+	// 일부 경우 URL에 특수 문자가 있어서 문제가 될 수 있음
+	try {
+		const urlObj = new URL(url);
+		// URL이 유효하면 그대로 반환
+		return url;
+	} catch (e) {
+		// URL 파싱 실패
+		console.warn('[Notion] 잘못된 URL 형식:', url);
+		return undefined;
+	}
+}
+
+// 파일 속성에서 첫 번째 파일 URL을 추출 (더 robust한 처리)
 function extractFirstFileUrl(files: any): string | undefined {
 	if (!files || !Array.isArray(files) || files.length === 0) return undefined;
 	const first = files[0];
-	if (first?.file?.url) return first.file.url;
-	if (first?.external?.url) return first.external.url;
+	if (!first) return undefined;
+	
+	let url: string | undefined;
+	
+	// 다양한 Notion 파일 형식 지원
+	if (first?.file?.url) url = first.file.url;
+	else if (first?.external?.url) url = first.external.url;
+	// name 속성에 URL이 있는 경우 (일부 Notion 버전)
+	else if (first?.name && typeof first.name === 'string' && first.name.startsWith('http')) url = first.name;
+	// 직접 URL 문자열인 경우
+	else if (typeof first === 'string' && first.startsWith('http')) url = first;
+	
+	// URL 정규화
+	if (url) {
+		return normalizeImageUrl(url);
+	}
+	
+	// 디버깅: 예상치 못한 형식 로그
+	if (process.env.NODE_ENV === 'development') {
+		console.warn('[Notion] 예상치 못한 파일 형식:', JSON.stringify(first, null, 2));
+	}
+	
 	return undefined;
 }
 
-// 파일 속성에서 모든 파일 URL을 추출
+// 파일 속성에서 모든 파일 URL을 추출 (더 robust한 처리)
 function extractAllFileUrls(files: any): string[] {
 	if (!files || !Array.isArray(files)) return [];
 	return files
-		.map((f: any) => f?.file?.url ?? f?.external?.url)
-		.filter(Boolean);
+		.map((f: any) => {
+			if (!f) return undefined;
+			
+			let url: string | undefined;
+			// 다양한 Notion 파일 형식 지원
+			if (f?.file?.url) url = f.file.url;
+			else if (f?.external?.url) url = f.external.url;
+			// name 속성에 URL이 있는 경우
+			else if (f?.name && typeof f.name === 'string' && f.name.startsWith('http')) url = f.name;
+			// 직접 URL 문자열인 경우
+			else if (typeof f === 'string' && f.startsWith('http')) url = f;
+			
+			// URL 정규화
+			return url ? normalizeImageUrl(url) : undefined;
+		})
+		.filter(Boolean) as string[];
 }
 
 // 페이지를 PortfolioItem으로 매핑
@@ -101,12 +158,41 @@ function mapPageToPortfolioItem(page: any): PortfolioItem | null {
     const typeLegacy: string | undefined = props?.['간판종류']?.select?.name;
     const type: string | undefined = (typeMs && typeMs.length > 0) ? typeMs.join(' · ') : typeLegacy;
     const completedAt: string | undefined = props?.['시공완료']?.date?.start ?? undefined;
+    // 모든 가능한 이미지 속성명 체크
     const coverFiles = props?.['메인이미지']?.files
         ?? props?.['메인 이미지']?.files
         ?? props?.['대표이미지']?.files
-        ?? props?.['대표 이미지']?.files;
+        ?? props?.['대표 이미지']?.files
+        ?? props?.['Cover']?.files
+        ?? props?.['cover']?.files
+        ?? props?.['이미지']?.files
+        ?? props?.['Image']?.files;
+    
     const coverImageUrl: string | undefined = extractFirstFileUrl(coverFiles);
     const coverImageUrls: string[] = extractAllFileUrls(coverFiles);
+    
+    // 디버깅: 이미지가 없는 경우 또는 특정 포트폴리오에 대한 상세 로그
+    if (!coverImageUrl) {
+        const isTargetPortfolio = title.includes('반포일등정형외과');
+        if (isTargetPortfolio || process.env.NODE_ENV === 'development') {
+            console.warn(`[Notion] 이미지를 찾을 수 없음 - 제목: ${title}, ID: ${page.id}`);
+            console.warn('[Notion] 사용 가능한 속성:', Object.keys(props));
+            console.warn('[Notion] coverFiles:', JSON.stringify(coverFiles, null, 2));
+            // 모든 파일 속성 찾기
+            const allFileProperties = Object.keys(props).filter(key => {
+                const prop = props[key];
+                return prop?.type === 'files' || prop?.files;
+            });
+            console.warn('[Notion] 파일 타입 속성들:', allFileProperties);
+            allFileProperties.forEach(key => {
+                console.warn(`[Notion] ${key} 속성 내용:`, JSON.stringify(props[key]?.files, null, 2));
+            });
+        }
+    } else if (title.includes('반포일등정형외과')) {
+        // 이미지 URL은 있지만 로드가 안 되는 경우
+        console.warn(`[Notion] 반포일등정형외과 이미지 URL 발견:`, coverImageUrl);
+        console.warn('[Notion] 모든 이미지 URLs:', coverImageUrls);
+    }
     const additionalImageUrls: string[] = extractAllFileUrls(
         // 실제 워크스페이스에서는 '보조이미지' 명칭 사용
         props?.['보조이미지']?.files
