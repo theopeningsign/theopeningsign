@@ -24,7 +24,7 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit & { 
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);
     try {
-        const res = await fetch(input, { ...rest, signal: controller.signal, next: { revalidate: 60 }
+        const res = await fetch(input, { ...rest, signal: controller.signal, next: { revalidate: 300 }
          });
         return res;
     } finally {
@@ -67,11 +67,12 @@ async function notionRetrievePage(pageId: string) {
     return res.json();
 }
 
-// HEIC 파일 확장자 확인 (export for use in other files)
-export function isHeicFile(url: string): boolean {
+// Notion 이미지 URL인지 확인
+export function isNotionImageUrl(url: string): boolean {
 	if (!url) return false;
-	const lowerUrl = url.toLowerCase();
-	return lowerUrl.includes('.heic') || lowerUrl.includes('.heif');
+	return url.includes('notion-static.com') || 
+		   url.includes('amazonaws.com') || 
+		   url.includes('prod-files-secure.s3');
 }
 
 // URL 정규화: Notion 이미지 URL을 안전하게 처리
@@ -84,12 +85,6 @@ function normalizeImageUrl(url: string | undefined): string | undefined {
 		return undefined;
 	}
 	
-	// HEIC 파일 감지 및 경고
-	if (isHeicFile(url)) {
-		console.warn('[Notion] HEIC 파일 감지 (웹 브라우저 미지원):', url);
-		// HEIC 파일도 반환하되, 클라이언트에서 처리하도록 함
-	}
-	
 	// Notion 이미지 URL에서 불필요한 파라미터 제거 (선택적)
 	// 일부 경우 URL에 특수 문자가 있어서 문제가 될 수 있음
 	try {
@@ -97,8 +92,10 @@ function normalizeImageUrl(url: string | undefined): string | undefined {
 		// URL이 유효하면 그대로 반환
 		return url;
 	} catch (e) {
-		// URL 파싱 실패
-		console.warn('[Notion] 잘못된 URL 형식:', url);
+		// URL 파싱 실패 (개발 환경에서만 로그)
+		if (process.env.NODE_ENV === 'development') {
+			console.warn('[Notion] 잘못된 URL 형식:', url);
+		}
 		return undefined;
 	}
 }
@@ -158,11 +155,19 @@ function extractAllFileUrls(files: any): string[] {
 function mapPageToPortfolioItem(page: any): PortfolioItem | null {
     if (!page || !page.properties) return null;
     const props = page.properties as any;
-    // 제목 속성 탐색: 우선 '병원명', 없으면 type이 title인 첫 속성 사용
+    // 제목 속성 탐색: 우선 '병원명', 없으면 type이 title인 첫 속성 사용 (최적화)
     const explicitTitle = props?.['병원명'];
-    const dynamicTitleKey = explicitTitle ? undefined : Object.keys(props).find((k) => props[k]?.type === 'title');
-    const titleSource = explicitTitle ?? (dynamicTitleKey ? props[dynamicTitleKey] : undefined);
-    const title = titleSource?.title?.map((t: any) => t?.plain_text).join('') ?? '';
+    let title = '';
+    if (explicitTitle?.title) {
+        // '병원명' 속성이 있으면 직접 사용
+        title = explicitTitle.title.map((t: any) => t?.plain_text || '').join('');
+    } else {
+        // 동적 탐색 (한 번만 실행)
+        const dynamicTitleKey = Object.keys(props).find((k) => props[k]?.type === 'title');
+        if (dynamicTitleKey && props[dynamicTitleKey]?.title) {
+            title = props[dynamicTitleKey].title.map((t: any) => t?.plain_text || '').join('');
+        }
+    }
 	if (!title) return null;
 
     const location: string | undefined = props?.['위치']?.rich_text?.map((t: any) => t?.plain_text).join('') || undefined;
@@ -184,27 +189,9 @@ function mapPageToPortfolioItem(page: any): PortfolioItem | null {
     const coverImageUrl: string | undefined = extractFirstFileUrl(coverFiles);
     const coverImageUrls: string[] = extractAllFileUrls(coverFiles);
     
-    // 디버깅: 이미지가 없는 경우 또는 특정 포트폴리오에 대한 상세 로그
-    if (!coverImageUrl) {
-        const isTargetPortfolio = title.includes('반포일등정형외과');
-        if (isTargetPortfolio || process.env.NODE_ENV === 'development') {
-            console.warn(`[Notion] 이미지를 찾을 수 없음 - 제목: ${title}, ID: ${page.id}`);
-            console.warn('[Notion] 사용 가능한 속성:', Object.keys(props));
-            console.warn('[Notion] coverFiles:', JSON.stringify(coverFiles, null, 2));
-            // 모든 파일 속성 찾기
-            const allFileProperties = Object.keys(props).filter(key => {
-                const prop = props[key];
-                return prop?.type === 'files' || prop?.files;
-            });
-            console.warn('[Notion] 파일 타입 속성들:', allFileProperties);
-            allFileProperties.forEach(key => {
-                console.warn(`[Notion] ${key} 속성 내용:`, JSON.stringify(props[key]?.files, null, 2));
-            });
-        }
-    } else if (title.includes('반포일등정형외과')) {
-        // 이미지 URL은 있지만 로드가 안 되는 경우
-        console.warn(`[Notion] 반포일등정형외과 이미지 URL 발견:`, coverImageUrl);
-        console.warn('[Notion] 모든 이미지 URLs:', coverImageUrls);
+    // 디버깅: 이미지가 없는 경우 (개발 환경에서만 간단한 로그)
+    if (!coverImageUrl && process.env.NODE_ENV === 'development') {
+        console.warn(`[Notion] 이미지를 찾을 수 없음 - 제목: ${title}, ID: ${page.id}`);
     }
     const additionalImageUrls: string[] = extractAllFileUrls(
         // 실제 워크스페이스에서는 '보조이미지' 명칭 사용
@@ -257,8 +244,8 @@ function buildQueryOptions(options?: NotionQueryOptions): any {
         sorts: [
             { timestamp: 'created_time', direction: 'descending' },
         ],
-        // 최근작업 정확도를 위해 넉넉하게 불러온 뒤 애플리케이션에서 재정렬/슬라이스
-        page_size: Math.max(options?.pageSize ?? 20, 50),
+        // 필요한 개수만 요청 (성능 최적화)
+        page_size: options?.pageSize ?? 100, // 기본값을 100으로 설정 (충분한 데이터 확보)
     };
 }
 
@@ -330,7 +317,9 @@ export async function getPortfolioById(id: string): Promise<PortfolioItem | null
             if (mapped) return mapped;
         } catch (e) {
             // 단건 조회 권한/네트워크 문제 발생 시 목록 데이터로 폴백
-            console.warn('[Notion] retrieve 실패, 목록 데이터로 폴백 시도', e);
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('[Notion] retrieve 실패, 목록 데이터로 폴백 시도', e);
+            }
         }
         const list = await getPortfolios();
         return list.find((p) => normalizeTo32Hex(p.id) === normalized) ?? null;

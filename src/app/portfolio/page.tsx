@@ -1,7 +1,7 @@
 import PortfolioCard from '@/components/PortfolioCard';
 import { getPortfolios } from '@/lib/notion';
 
-export const revalidate = 60;
+export const revalidate = 300; // 5분 캐시 (첫 방문 후 매우 빠름)
 
 export default async function PortfolioPage() {
 	const items = await getPortfolios();

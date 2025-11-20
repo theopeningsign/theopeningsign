@@ -38,6 +38,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
+      <head>
+        {/* 이미지 preconnect로 로딩 속도 개선 */}
+        <link rel="preconnect" href="https://secure.notion-static.com" />
+        <link rel="preconnect" href="https://s3.us-west-2.amazonaws.com" />
+        <link rel="preconnect" href="https://prod-files-secure.s3.us-west-2.amazonaws.com" />
+      </head>
       <body className={`${notoSans.variable} antialiased bg-white text-slate-800`}>
         <Header />
         <main className="mx-auto min-h-[70vh] max-w-6xl px-4 py-8">{children}</main>

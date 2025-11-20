@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useState } from 'react';
 import Lightbox from '@/components/Lightbox';
-import { isHeicFile } from '@/lib/notion';
+import { isNotionImageUrl } from '@/lib/notion';
 
 interface Props {
 	images: string[]; // 보조 이미지들
@@ -42,7 +42,7 @@ export default function Gallery({ images, covers, cover }: Props) {
 							alt={`추가 이미지 ${i+1}`} 
 							fill 
 							className="object-cover transition-transform group-hover:scale-[1.03]"
-							unoptimized={src ? isHeicFile(src) : false} // HEIC 파일은 최적화 비활성화
+							unoptimized={src ? isNotionImageUrl(src) : false} // Notion 이미지만 최적화 비활성화 (Vercel Cache Writes 초과 방지)
 						/>
 					</button>
 				))}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -8,7 +9,14 @@ export default function Home() {
         {/* 왼쪽: 로고 (모바일에서 먼저, 데스크톱 좌측) */}
         <div className="logo-stage">
           {/* 로고 페이드인 이미지 */}
-          <img src="/logo.png" alt="THE OPENING SIGN" className="relative z-10 w-[min(80vw,520px)] h-auto logo-fade-in" />
+          <Image 
+            src="/logo.png" 
+            alt="THE OPENING SIGN" 
+            width={520}
+            height={520}
+            className="relative z-10 w-[min(80vw,520px)] h-auto logo-fade-in"
+            priority
+          />
           {/* 반짝임 효과 제거 (로고만 페이드인) */}
         </div>
         {/* 오른쪽: 문구 (모바일에서는 로고 아래로) */}

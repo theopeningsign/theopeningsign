@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { isNotionImageUrl } from '@/lib/notion';
 
 interface Props {
 	images: string[];
@@ -26,8 +27,18 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	const [pinchStart, setPinchStart] = useState<{ distance: number; scale: number } | null>(null);
 	const [wasPinching, setWasPinching] = useState(false); // 핀치 줌이 있었는지 추적
 	const [lastTouchAt, setLastTouchAt] = useState(0); // 최근 터치 시간 (click 무시용)
+	const [imgLoaded, setImgLoaded] = useState(true); // 이미지 로딩 완료 상태 (초기값 true)
+	const [prevImage, setPrevImage] = useState<string>(''); // 이전 이미지 (부드러운 전환용)
 	const total = images.length;
 	const current = useMemo(() => images[index], [images, index]);
+
+	// 이미지가 변경되면 이전 이미지 저장하고 로딩 상태 리셋
+	useEffect(() => {
+		if (current && current !== prevImage) {
+			setPrevImage(current);
+			setImgLoaded(false);
+		}
+	}, [current, prevImage]);
 
 	// 배경 스크롤 방지
 	useEffect(() => {
@@ -204,11 +215,12 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 			return;
 		}
 
-		// 확대 상태가 아니면 크기 토글
+		// 100% 상태면 150%로 확대
 		if (scale === 1) {
-			setZoomed((z) => !z);
+			setScale(1.5);
+			setTranslate({ x: 0, y: 0 });
 		} else {
-			// 확대 상태면 초기화
+			// 확대 상태면 100%로 초기화
 			setScale(1);
 			setTranslate({ x: 0, y: 0 });
 		}
@@ -304,9 +316,9 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 				<button aria-label="닫기" className="absolute right-2 top-2 z-20 rounded bg-white/20 p-2 text-white hover:bg-white/30" onClick={onClose}>
 					<X />
 				</button>
-				{/* 좌/우 대형 클릭 영역 - 화면 끝, 전체 높이 */}
-				<button aria-label="이전" className="absolute left-0 top-0 z-10 h-full w-[16vw] min-w-[120px] cursor-pointer bg-transparent hover:bg-white/5" onClick={goPrev} />
-				<button aria-label="다음" className="absolute right-0 top-0 z-10 h-full w-[16vw] min-w-[120px] cursor-pointer bg-transparent hover:bg-white/5" onClick={goNext} />
+				{/* 좌/우 클릭 영역 - 화살표 주변만 */}
+				<button aria-label="이전" className="absolute left-0 top-0 z-10 h-full w-[8vw] min-w-[60px] max-w-[100px] cursor-pointer bg-transparent hover:bg-white/5" onClick={goPrev} />
+				<button aria-label="다음" className="absolute right-0 top-0 z-10 h-full w-[8vw] min-w-[60px] max-w-[100px] cursor-pointer bg-transparent hover:bg-white/5" onClick={goNext} />
 
 				{/* 표시용 화살표 버튼 */}
 				<button aria-label="이전" className="absolute left-4 top-1/2 z-20 -translate-y-1/2 rounded bg-white/20 p-3 text-white hover:bg-white/30" onClick={goPrev}>
@@ -381,7 +393,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 							transform: `scale(${scale}) translate(${translate.x}px, ${translate.y}px)`, 
 							transformOrigin: 'center', 
 					transition: isDragging ? 'none' : (scale !== 1 ? 'transform 0.1s ease-out' : 'none'),
-							cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : (zoomed ? 'zoom-out' : 'zoom-in'),
+							cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
 							touchAction: 'none' // 기본 브라우저 핀치 줌 방지, 우리가 직접 구현
 						}}
 						onMouseDown={handleMouseDown}
@@ -395,13 +407,29 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 							// 마우스가 영역을 벗어날 때는 전역 이벤트가 처리
 						}}
 					>
+						{/* 이전 이미지 유지 (부드러운 전환) */}
+						{prevImage && prevImage !== current && !imgLoaded && (
+							<Image
+								src={prevImage || '/placeholder.svg'}
+								alt={`이미지 로딩 중`}
+								fill
+								className="object-contain pointer-events-none opacity-50"
+								priority
+								draggable={false}
+								unoptimized={prevImage ? isNotionImageUrl(prevImage) : false} // Notion 이미지만 최적화 비활성화 (Vercel Cache Writes 초과 방지)
+							/>
+						)}
+						{/* 현재 이미지 */}
 						<Image
 							src={current || '/placeholder.svg'}
 							alt={`이미지 ${index + 1}`}
 							fill
-							className="object-contain pointer-events-none"
+							className={`object-contain pointer-events-none transition-opacity duration-200 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
 							priority
 							draggable={false}
+							unoptimized={current ? isNotionImageUrl(current) : false} // Notion 이미지만 최적화 비활성화 (Vercel Cache Writes 초과 방지)
+							onLoad={() => setImgLoaded(true)}
+							onError={() => setImgLoaded(true)} // 에러가 나도 로딩 상태 해제
 						/>
 					</div>
 				</div>

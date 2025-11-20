@@ -6,8 +6,9 @@ import { Suspense } from 'react';
 import Gallery from '@/components/Gallery';
 import type { Metadata } from 'next';
 import HeroLightbox from '@/components/HeroLightbox';
+import BackButton from '@/components/BackButton';
 
-export const revalidate = 60;
+export const revalidate = 300; // 5분 캐시 (첫 방문 후 매우 빠름)
 export const dynamic = 'force-dynamic';
 
 type MaybePromise<T> = T | Promise<T>;
@@ -23,7 +24,7 @@ export default async function PortfolioDetailPage({ params }: Props) {
 
 	return (
 		<div className="space-y-8">
-			<Link href="/portfolio" className="inline-flex items-center gap-1 text-base md:text-lg font-medium text-blue-800 hover:underline mb-3">← 뒤로가기</Link>
+			<BackButton />
 			<header className="space-y-1">
 				<h1 className="text-3xl font-extrabold text-slate-900">{item.title}</h1>
 				<p className="text-slate-600">{item.location || '위치 미상'} | {item.type || '기타'} | {item.completedAt ? (() => { const [y, m] = item.completedAt.split('-'); return `${y}년 ${Number(m)}월`; })() : '연월 미상'}</p>
