@@ -73,19 +73,12 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 				src={imgError ? '/placeholder.svg' : (src || '/placeholder.svg')} 
 				alt={alt} 
 				fill 
-				className={`object-cover transition-transform group-hover:scale-[1.03] ${hasLoadedRef.current ? 'opacity-100' : (imgLoading ? 'opacity-0' : 'opacity-100')} ${hasLoadedRef.current ? '' : 'transition-opacity duration-200'}`}
+				className={`object-cover transition-opacity duration-200 transition-transform group-hover:scale-[1.03] ${imgLoading ? 'opacity-0' : 'opacity-100'}`}
 				unoptimized={src ? isNotionImageUrl(src) : false}
 				priority={priority}
 				loading={priority ? undefined : 'lazy'}
 				onLoad={handleLoad}
 				onError={handleError}
-				onLoadingComplete={() => {
-					if (!hasLoadedRef.current) {
-						setImgLoading(false);
-						hasLoadedRef.current = true;
-					}
-					clearImageReloadFlag(src ? `img_error_${src}` : '');
-				}}
 			/>
 		</>
 	);

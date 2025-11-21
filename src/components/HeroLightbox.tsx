@@ -103,7 +103,7 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                     src={cover}
                     alt={title}
                     fill
-                    className={`object-cover transition-opacity duration-200 group-hover:scale-[1.02] ${hasLoadedRef.current ? 'opacity-100' : (imgLoading ? 'opacity-0' : 'opacity-100')} ${hasLoadedRef.current ? '' : 'transition-opacity duration-200'}`}
+                    className={`object-cover transition-opacity duration-200 group-hover:scale-[1.02] ${imgLoading ? 'opacity-0' : 'opacity-100'}`}
                     priority
                     unoptimized={isNotionImageUrl(cover)}
                     onLoad={() => {
@@ -114,6 +114,10 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                             setImgLoading(false);
                             setImgError(false);
                             hasLoadedRef.current = true;
+                            const errorKey = cover ? `img_error_${cover}` : '';
+                            if (errorKey) {
+                                clearImageReloadFlag(errorKey);
+                            }
                         }
                     }}
                     onError={() => {
@@ -129,19 +133,6 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                             if (errorKey) {
                                 scheduleImageReload(errorKey);
                             }
-                        }
-                    }}
-                    onLoadingComplete={() => {
-                        if (!hasLoadedRef.current) {
-                            if (loadTimeoutRef.current) {
-                                clearTimeout(loadTimeoutRef.current);
-                            }
-                            setImgLoading(false);
-                            hasLoadedRef.current = true;
-                        }
-                        const errorKey = cover ? `img_error_${cover}` : '';
-                        if (errorKey) {
-                            clearImageReloadFlag(errorKey);
                         }
                     }}
                 />

@@ -110,21 +110,11 @@ function PortfolioCard({ item, priority = false }: Props) {
 					src={imgError ? '/placeholder.svg' : (item.coverImageUrl || '/placeholder.svg')}
 					alt={item.title}
 					fill
-					className={`object-cover ${hasLoadedRef.current ? 'opacity-100' : (imgLoading ? 'opacity-0' : 'opacity-100')} ${hasLoadedRef.current ? '' : 'transition-opacity duration-200'}`}
+					className={`object-cover transition-opacity duration-200 ${imgLoading ? 'opacity-0' : 'opacity-100'}`}
 					placeholder="blur"
 					blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMTAwJScgaGVpZ2h0PScxMDAlJyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnLz4="
 					onError={handleImageError}
 					onLoad={handleImageLoad}
-					onLoadingComplete={() => {
-						if (!hasLoadedRef.current) {
-							if (forceShowTimeoutRef.current) {
-								clearTimeout(forceShowTimeoutRef.current);
-								forceShowTimeoutRef.current = null;
-							}
-							setImgLoading(false);
-							hasLoadedRef.current = true;
-						}
-					}}
 					unoptimized={imgError || (item.coverImageUrl ? isNotionImageUrl(item.coverImageUrl) : false)} // Notion 이미지만 최적화 비활성화 (Vercel Cache Writes 초과 방지)
 					priority={priority} // 첫 화면에 보이는 이미지만 priority
 					loading={priority ? undefined : 'lazy'} // priority가 아닌 경우 lazy loading
