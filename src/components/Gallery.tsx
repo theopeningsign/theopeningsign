@@ -30,9 +30,9 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 
 	// 초기 마운트 시 이미지가 이미 로드되었는지 확인 (캐시된 이미지 대응)
 	useEffect(() => {
-		if (src && !hasLoadedRef.current) {
+		if (src && !hasLoadedRef.current && typeof window !== 'undefined') {
 			// 브라우저 캐시에 이미지가 있는지 확인
-			const img = new Image();
+			const img = document.createElement('img');
 			img.onload = () => {
 				// 이미지가 캐시에 있으면 즉시 로딩 완료 상태로 설정
 				if (!hasLoadedRef.current) {
