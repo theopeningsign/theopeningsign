@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import Lightbox from '@/components/Lightbox';
 import { isNotionImageUrl } from '@/lib/notion';
 import { scheduleImageReload, clearImageReloadFlag } from '@/lib/imageReload';
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function HeroLightbox({ cover, covers, images, title, coverIndex = 0 }: Props) {
+    const router = useRouter();
     const [open, setOpen] = useState(false);
     const [imgLoading, setImgLoading] = useState(true); // 초기값을 true로 설정 (PortfolioCard와 동일)
     const [imgError, setImgError] = useState(false);
@@ -26,8 +28,12 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
 
     // 이미지 URL이 변경되면 상태 리셋
     useEffect(() => {
-        // URL이 실제로 변경된 경우에만 리셋
-        if (prevCoverRef.current !== cover) {
+        // URL이 실제로 변경된 경우에만 리셋 (refresh 중이면 같은 URL은 리셋하지 않음)
+        const isRefreshing = typeof window !== 'undefined' && sessionStorage.getItem('isRefreshing') === 'true';
+        const urlChanged = prevCoverRef.current !== cover;
+        const isSameUrl = prevCoverRef.current && cover && prevCoverRef.current === cover;
+        
+        if (urlChanged && !(isRefreshing && isSameUrl)) {
             prevCoverRef.current = cover;
             
             // 이미지 URL이 없으면 즉시 에러 처리
@@ -38,10 +44,12 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                 return;
             }
             
-            // URL이 변경되었으므로 로딩 상태 리셋
-            setImgLoading(true);
-            setImgError(false);
-            hasLoadedRef.current = false;
+            // refresh 중이 아니거나 URL이 실제로 변경된 경우에만 로딩 상태 리셋
+            if (!isRefreshing || !isSameUrl) {
+                setImgLoading(true);
+                setImgError(false);
+                hasLoadedRef.current = false;
+            }
             
             // 타임아웃: 5초 후에도 로드되지 않으면 에러로 처리
             if (loadTimeoutRef.current) {
@@ -100,15 +108,20 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
 
     return (
         <div className="group relative w-full aspect-[16/9] overflow-hidden rounded-xl border">
-            {imgLoading && !hasLoadedRef.current && (
-                <div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
+            {(imgLoading || imgError) && !hasLoadedRef.current && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100">
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-orange-400" />
+                        <span className="text-xs text-slate-400">이미지 로딩 중...</span>
+                    </div>
+                </div>
             )}
-            {cover && !imgError && (
+            {cover && (
                 <Image
                     src={cover}
                     alt={title}
                     fill
-                    className={`object-cover transition-opacity duration-200 group-hover:scale-[1.02] ${imgLoading ? 'opacity-0' : 'opacity-100'}`}
+                    className={`object-cover transition-opacity duration-200 group-hover:scale-[1.02] ${(imgLoading || imgError) ? 'opacity-0' : 'opacity-100'}`}
                     priority
                     unoptimized={isNotionImageUrl(cover)}
                     onLoad={() => {
@@ -131,21 +144,16 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                                 clearTimeout(loadTimeoutRef.current);
                             }
                             setImgError(true);
-                            setImgLoading(false);
+                            setImgLoading(true); // 에러 발생해도 로딩 상태 유지 (placeholder 방지)
                             hasLoadedRef.current = true;
 
                             const errorKey = cover ? `img_error_${cover}` : '';
                             if (errorKey) {
-                                scheduleImageReload(errorKey);
+                                scheduleImageReload(errorKey, router);
                             }
                         }
                     }}
                 />
-            )}
-            {(!cover || imgError) && (
-                <div className="absolute inset-0 flex items-center justify-center bg-slate-100 text-slate-400">
-                    <span className="text-sm">Image Placeholder</span>
-                </div>
             )}
             <button
                 type="button"

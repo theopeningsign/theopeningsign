@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useState, useRef, memo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Lightbox from '@/components/Lightbox';
 import { isNotionImageUrl } from '@/lib/notion';
 import { scheduleImageReload, clearImageReloadFlag } from '@/lib/imageReload';
@@ -13,7 +14,7 @@ interface Props {
 }
 
 // 개별 이미지 컴포넌트
-const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = false }: { src: string; alt: string; priority?: boolean }) {
+const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = false, router }: { src: string; alt: string; priority?: boolean; router: { refresh: () => void } }) {
 	const [imgLoading, setImgLoading] = useState(true);
 	const [imgError, setImgError] = useState(false);
 	const hasLoadedRef = useRef(false);
@@ -79,9 +80,9 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 			setImgLoading(false);
 			hasLoadedRef.current = true;
 
-			// 페이지 새로고침은 백그라운드에서만 실행 (사용자 경험 방해 최소화)
+			// 서버 컴포넌트만 갱신 (부드러운 갱신, 사용자 경험 방해 최소화)
 			if (src) {
-				scheduleImageReload(`img_error_${src}`);
+				scheduleImageReload(`img_error_${src}`, router);
 			}
 		}
 	};
@@ -89,24 +90,29 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 	return (
 		<>
 			{imgLoading && !hasLoadedRef.current && (
-				<div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
+				<div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-orange-400" />
+                </div>
 			)}
-			<Image 
-				src={src || '/placeholder.svg'} 
-				alt={alt} 
-				fill 
-				className={`object-cover transition-opacity duration-200 transition-transform group-hover:scale-[1.03] ${hasLoadedRef.current ? 'opacity-100' : (imgLoading ? 'opacity-0' : 'opacity-100')}`}
-				unoptimized={src ? isNotionImageUrl(src) : false}
-				priority={priority}
-				loading={priority ? undefined : 'lazy'}
-				onLoad={handleLoad}
-				onError={handleError}
-			/>
+			{src && (
+				<Image 
+					src={src} 
+					alt={alt} 
+					fill 
+					className={`object-cover transition-opacity duration-200 transition-transform group-hover:scale-[1.03] ${hasLoadedRef.current ? 'opacity-100' : (imgLoading ? 'opacity-0' : 'opacity-100')}`}
+					unoptimized={isNotionImageUrl(src)}
+					priority={priority}
+					loading={priority ? undefined : 'lazy'}
+					onLoad={handleLoad}
+					onError={handleError}
+				/>
+			)}
 		</>
 	);
-}, (prevProps, nextProps) => prevProps.src === nextProps.src && prevProps.priority === nextProps.priority);
+}, (prevProps, nextProps) => prevProps.src === nextProps.src && prevProps.priority === nextProps.priority && prevProps.router === nextProps.router);
 
 export default function Gallery({ images, covers, cover }: Props) {
+	const router = useRouter();
 	const [open, setOpen] = useState(false);
 	const [index, setIndex] = useState(0);
 
@@ -141,6 +147,7 @@ export default function Gallery({ images, covers, cover }: Props) {
 								src={src || '/placeholder.svg'} 
 								alt={`추가 이미지 ${i+1}`}
 								priority={priority}
+								router={router}
 							/>
 						</button>
 					);
