@@ -30,7 +30,13 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 
 	// 초기 마운트 시 이미지가 이미 로드되었는지 확인 (캐시된 이미지 대응)
 	useEffect(() => {
-		if (src && !hasLoadedRef.current && typeof window !== 'undefined') {
+		// 이미 로드된 이미지는 상태를 리셋하지 않음
+		if (hasLoadedRef.current) {
+			setImgLoading(false);
+			return;
+		}
+		
+		if (src && typeof window !== 'undefined') {
 			// 브라우저 캐시에 이미지가 있는지 확인
 			const img = document.createElement('img');
 			img.onload = () => {
@@ -56,7 +62,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 				clearTimeout(forceShowTimeout);
 			};
 		}
-	}, [src, imgError]);
+	}, [src]);
 
 	const handleLoad = () => {
 		// 이미지가 로드되면 영구적으로 로딩 완료 상태 유지
