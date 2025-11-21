@@ -30,9 +30,8 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 
 	// 초기 마운트 시 이미지가 이미 로드되었는지 확인 (캐시된 이미지 대응)
 	useEffect(() => {
-		// 이미 로드된 이미지는 상태를 리셋하지 않음
+		// 이미 로드된 이미지는 아무것도 하지 않음 (무한 루프 방지)
 		if (hasLoadedRef.current) {
-			setImgLoading(false);
 			return;
 		}
 		
