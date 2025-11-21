@@ -13,8 +13,14 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 	const [loadedPriorityCount, setLoadedPriorityCount] = useState(0);
 	const [showPriorityImages, setShowPriorityImages] = useState(false);
 	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const isCheckingRef = useRef(false); // checkAllImages 실행 중인지 추적
 
 	const handlePriorityLoad = useCallback(() => {
+		// checkAllImages가 실행 중이면 무시 (뒤로가기 시 중구난방 방지)
+		if (isCheckingRef.current) {
+			return;
+		}
+		
 		setLoadedPriorityCount((prev) => {
 			const newCount = prev + 1;
 			// 모든 priority 이미지가 로드되면 전환 시작
@@ -41,6 +47,9 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 		let checkedCount = 0;
 		const priorityItems = items.slice(0, priorityCount);
 
+		// checkAllImages 실행 시작
+		isCheckingRef.current = true;
+
 		// 모든 priority 이미지의 로드 상태를 한 번에 확인
 		const checkAllImages = () => {
 			if (!mounted) return;
@@ -48,6 +57,13 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 			priorityItems.forEach((item) => {
 				if (!item.coverImageUrl) {
 					checkedCount++;
+					// 모든 이미지 체크 완료 시 처리
+					if (checkedCount >= priorityItems.length) {
+						isCheckingRef.current = false;
+						if (mounted) {
+							setShowPriorityImages(true);
+						}
+					}
 					return;
 				}
 
@@ -57,7 +73,10 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 					checkedCount++;
 					// 모든 이미지가 로드되었으면 즉시 표시
 					if (checkedCount >= priorityItems.length) {
-						setShowPriorityImages(true);
+						isCheckingRef.current = false;
+						if (mounted) {
+							setShowPriorityImages(true);
+						}
 					}
 				};
 				img.onerror = () => {
@@ -65,7 +84,10 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 					checkedCount++;
 					// 에러도 카운트에 포함 (에러도 로드 시도 완료로 간주)
 					if (checkedCount >= priorityItems.length) {
-						setShowPriorityImages(true);
+						isCheckingRef.current = false;
+						if (mounted) {
+							setShowPriorityImages(true);
+						}
 					}
 				};
 				img.src = item.coverImageUrl;
@@ -73,7 +95,10 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 
 			// 이미지가 없는 경우 대비
 			if (priorityItems.length === 0) {
-				setShowPriorityImages(true);
+				isCheckingRef.current = false;
+				if (mounted) {
+					setShowPriorityImages(true);
+				}
 			}
 		};
 
@@ -83,12 +108,14 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 		// 타임아웃: 일정 시간 후에도 모든 이미지가 로드되지 않으면 강제로 표시
 		timeoutRef.current = setTimeout(() => {
 			if (!showPriorityImages && mounted) {
+				isCheckingRef.current = false;
 				setShowPriorityImages(true);
 			}
 		}, 1500); // 1.5초 후 강제로 표시
 
 		return () => {
 			mounted = false;
+			isCheckingRef.current = false;
 			if (timeoutRef.current) {
 				clearTimeout(timeoutRef.current);
 				timeoutRef.current = null;
