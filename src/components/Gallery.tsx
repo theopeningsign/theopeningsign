@@ -48,13 +48,13 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 			};
 			img.src = src;
 			
-			// 최후의 안전장치: 일정 시간 후에도 로드되지 않으면 강제로 보이게 함
+			// 최후의 안전장치: 일정 시간 후에도 로드되지 않으면 강제로 보이게 함 (모바일 네트워크 지연 고려)
 			const forceShowTimeout = setTimeout(() => {
 				if (!hasLoadedRef.current && !imgError) {
 					setImgLoading(false);
 					hasLoadedRef.current = true;
 				}
-			}, 500); // 500ms 후 강제로 보이게 함
+			}, 2000); // 2초 후 강제로 보이게 함 (안정성 우선)
 
 			return () => {
 				img.onload = null;
@@ -73,10 +73,13 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 
 	const handleError = () => {
 		if (!hasLoadedRef.current) {
+			// 에러가 발생해도 원본 이미지를 계속 시도 (안정성 우선)
+			// imgError는 true로 설정하되, 원본 URL은 계속 사용
 			setImgError(true);
 			setImgLoading(false);
 			hasLoadedRef.current = true;
 
+			// 페이지 새로고침은 백그라운드에서만 실행 (사용자 경험 방해 최소화)
 			if (src) {
 				scheduleImageReload(`img_error_${src}`);
 			}
@@ -89,7 +92,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 				<div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
 			)}
 			<Image 
-				src={imgError ? '/placeholder.svg' : (src || '/placeholder.svg')} 
+				src={src || '/placeholder.svg'} 
 				alt={alt} 
 				fill 
 				className={`object-cover transition-opacity duration-200 transition-transform group-hover:scale-[1.03] ${hasLoadedRef.current ? 'opacity-100' : (imgLoading ? 'opacity-0' : 'opacity-100')}`}
