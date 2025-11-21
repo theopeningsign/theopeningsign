@@ -31,6 +31,18 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 	// 초기 마운트 시 이미지가 이미 로드되었는지 확인 (캐시된 이미지 대응)
 	useEffect(() => {
 		if (src && !hasLoadedRef.current) {
+			// 브라우저 캐시에 이미지가 있는지 확인
+			const img = new Image();
+			img.onload = () => {
+				// 이미지가 캐시에 있으면 즉시 로딩 완료 상태로 설정
+				if (!hasLoadedRef.current) {
+					setImgLoading(false);
+					setImgError(false);
+					hasLoadedRef.current = true;
+				}
+			};
+			img.src = src;
+			
 			// 최후의 안전장치: 일정 시간 후에도 로드되지 않으면 강제로 보이게 함
 			const forceShowTimeout = setTimeout(() => {
 				if (!hasLoadedRef.current && !imgError) {
@@ -39,16 +51,18 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 				}
 			}, 500); // 500ms 후 강제로 보이게 함
 
-			return () => clearTimeout(forceShowTimeout);
+			return () => {
+				img.onload = null;
+				clearTimeout(forceShowTimeout);
+			};
 		}
 	}, [src, imgError]);
 
 	const handleLoad = () => {
-		if (!hasLoadedRef.current) {
-			setImgLoading(false);
-			setImgError(false);
-			hasLoadedRef.current = true;
-		}
+		// 이미지가 로드되면 영구적으로 로딩 완료 상태 유지
+		setImgLoading(false);
+		setImgError(false);
+		hasLoadedRef.current = true;
 		clearImageReloadFlag(src ? `img_error_${src}` : '');
 	};
 
@@ -73,7 +87,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 				src={imgError ? '/placeholder.svg' : (src || '/placeholder.svg')} 
 				alt={alt} 
 				fill 
-				className={`object-cover transition-opacity duration-200 transition-transform group-hover:scale-[1.03] ${imgLoading ? 'opacity-0' : 'opacity-100'}`}
+				className={`object-cover transition-opacity duration-200 transition-transform group-hover:scale-[1.03] ${hasLoadedRef.current ? 'opacity-100' : (imgLoading ? 'opacity-0' : 'opacity-100')}`}
 				unoptimized={src ? isNotionImageUrl(src) : false}
 				priority={priority}
 				loading={priority ? undefined : 'lazy'}
