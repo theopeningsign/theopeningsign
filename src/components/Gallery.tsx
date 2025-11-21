@@ -29,7 +29,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 		}
 	}, [src]);
 
-	// 초기 마운트 시 이미지가 이미 로드되었는지 확인 (캐시된 이미지 대응)
+	// 초기 마운트 시 이미지가 이미 로드되었는지 확인 (캐시된 이미지 대응 + refresh 후 상태 복원)
 	useEffect(() => {
 		// 이미 로드된 이미지는 아무것도 하지 않음 (무한 루프 방지)
 		if (hasLoadedRef.current) {
@@ -37,6 +37,18 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 		}
 		
 		if (src && typeof window !== 'undefined') {
+			// router.refresh() 후에도 상태 유지: sessionStorage에서 로드 상태 확인
+			const loadedKey = `img_loaded_${src}`;
+			const wasLoaded = sessionStorage.getItem(loadedKey) === 'true';
+			
+			if (wasLoaded) {
+				// 이전에 로드된 이미지면 즉시 로드 완료 처리 (refresh 후 깜빡임 방지)
+				setImgLoading(false);
+				setImgError(false);
+				hasLoadedRef.current = true;
+				return;
+			}
+			
 			// 브라우저 캐시에 이미지가 있는지 확인
 			const img = document.createElement('img');
 			img.onload = () => {
@@ -45,6 +57,8 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 					setImgLoading(false);
 					setImgError(false);
 					hasLoadedRef.current = true;
+					// sessionStorage에 로드 상태 저장 (refresh 후 복원용)
+					sessionStorage.setItem(loadedKey, 'true');
 				}
 			};
 			img.src = src;
@@ -62,13 +76,17 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 				clearTimeout(forceShowTimeout);
 			};
 		}
-	}, [src]);
+	}, [src, imgError]);
 
 	const handleLoad = () => {
 		// 이미지가 로드되면 영구적으로 로딩 완료 상태 유지
 		setImgLoading(false);
 		setImgError(false);
 		hasLoadedRef.current = true;
+		// sessionStorage에 로드 상태 저장 (refresh 후 복원용)
+		if (src) {
+			sessionStorage.setItem(`img_loaded_${src}`, 'true');
+		}
 		clearImageReloadFlag(src ? `img_error_${src}` : '');
 	};
 
@@ -99,7 +117,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 					src={src} 
 					alt={alt} 
 					fill 
-					className={`object-cover transition-opacity duration-200 transition-transform group-hover:scale-[1.03] ${hasLoadedRef.current ? 'opacity-100' : (imgLoading ? 'opacity-0' : 'opacity-100')}`}
+					className={`object-cover transition-opacity duration-200 transition-transform group-hover:scale-[1.03] ${(imgLoading && !hasLoadedRef.current) ? 'opacity-0' : 'opacity-100'}`}
 					unoptimized={isNotionImageUrl(src)}
 					priority={priority}
 					loading={priority ? undefined : 'lazy'}

@@ -71,17 +71,57 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
         };
     }, [cover]);
 
-    // 초기 마운트 시 이미지가 이미 로드되었는지 확인 (캐시된 이미지 대응)
+    // 초기 마운트 시 이미지가 이미 로드되었는지 확인 (캐시된 이미지 대응 + refresh 후 상태 복원)
     useEffect(() => {
         // 이미 로드된 이미지는 아무것도 하지 않음 (무한 루프 방지)
         if (hasLoadedRef.current) {
             return;
         }
         
-        if (cover) {
+        if (cover && typeof window !== 'undefined') {
+            // router.refresh() 후에도 상태 유지: sessionStorage에서 로드 상태 확인
+            const loadedKey = `img_loaded_${cover}`;
+            const wasLoaded = sessionStorage.getItem(loadedKey) === 'true';
+            
+            if (wasLoaded) {
+                // 이전에 로드된 이미지면 즉시 로드 완료 처리 (refresh 후 깜빡임 방지)
+                setImgLoading(false);
+                setImgError(false);
+                hasLoadedRef.current = true;
+                if (loadTimeoutRef.current) {
+                    clearTimeout(loadTimeoutRef.current);
+                }
+                return;
+            }
+            
+            // 브라우저 캐시에 이미지가 있는지 먼저 확인
+            const img = document.createElement('img');
+            let cacheChecked = false;
+            
+            img.onload = () => {
+                if (!hasLoadedRef.current && !cacheChecked) {
+                    cacheChecked = true;
+                    // 이미지가 캐시에 있으면 즉시 로드 완료 처리
+                    setImgLoading(false);
+                    setImgError(false);
+                    hasLoadedRef.current = true;
+                    // sessionStorage에 로드 상태 저장 (refresh 후 복원용)
+                    sessionStorage.setItem(loadedKey, 'true');
+                    if (loadTimeoutRef.current) {
+                        clearTimeout(loadTimeoutRef.current);
+                    }
+                }
+            };
+            
+            img.onerror = () => {
+                cacheChecked = true;
+            };
+            
+            img.src = cover;
+            
             // 최후의 안전장치: 일정 시간 후에도 로드되지 않으면 강제로 보이게 함
             const forceShowTimeout = setTimeout(() => {
-                if (!hasLoadedRef.current && !imgError) {
+                if (!hasLoadedRef.current && !imgError && !cacheChecked) {
                     // 이미지가 로드되지 않았어도 일단 보이게 함 (새로고침 후에는 보일 것)
                     setImgLoading(false);
                     hasLoadedRef.current = true;
@@ -91,9 +131,13 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                 }
             }, 500); // 500ms 후 강제로 보이게 함
 
-            return () => clearTimeout(forceShowTimeout);
+            return () => {
+                img.onload = null;
+                img.onerror = null;
+                clearTimeout(forceShowTimeout);
+            };
         }
-    }, [cover]);
+    }, [cover, imgError]);
 
     // 클릭한 이미지가 전체 리스트에서 몇 번째인지 계산
     // covers 배열에서 cover의 인덱스를 찾거나, 전달받은 coverIndex 사용
@@ -121,7 +165,7 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                     src={cover}
                     alt={title}
                     fill
-                    className={`object-cover transition-opacity duration-200 group-hover:scale-[1.02] ${(imgLoading || imgError) ? 'opacity-0' : 'opacity-100'}`}
+                    className={`object-cover transition-opacity duration-200 group-hover:scale-[1.02] ${(imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'opacity-0' : 'opacity-100'}`}
                     priority
                     unoptimized={isNotionImageUrl(cover)}
                     onLoad={() => {
@@ -132,6 +176,10 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                             setImgLoading(false);
                             setImgError(false);
                             hasLoadedRef.current = true;
+                            // sessionStorage에 로드 상태 저장 (refresh 후 복원용)
+                            if (cover) {
+                                sessionStorage.setItem(`img_loaded_${cover}`, 'true');
+                            }
                             const errorKey = cover ? `img_error_${cover}` : '';
                             if (errorKey) {
                                 clearImageReloadFlag(errorKey);

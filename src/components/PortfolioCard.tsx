@@ -103,6 +103,15 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 		}
 	}, [item.coverImageUrl, priority, onPriorityLoad]);
 
+	// showPriorityImages가 true로 변경될 때 이미지가 이미 로드되어 있으면 깜빡임 방지
+	useEffect(() => {
+		if (priority && showPriorityImages && hasLoadedRef.current && !imgLoading) {
+			// 이미지가 이미 로드되어 있고 showPriorityImages가 true로 변경되면
+			// opacity 전환을 즉시 완료하여 깜빡임 방지
+			// (이미 className에 opacity-100이 적용되므로 추가 작업 불필요)
+		}
+	}, [priority, showPriorityImages, imgLoading]);
+
 	// 모바일 네트워크 지연 대응: 일정 시간 후에도 로드되지 않으면 강제로 보이게 함
 	useEffect(() => {
 		if (item.coverImageUrl && !hasLoadedRef.current && !imgError) {
