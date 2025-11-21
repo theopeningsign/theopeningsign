@@ -66,12 +66,16 @@ export async function generateMetadata({ params }: MetadataProps): Promise<Metad
   const resolved = (typeof (params as any)?.then === 'function') ? await (params as any) : params as { id: string };
   const idParam = resolved?.id || '';
   const item = await getPortfolioById(idParam);
-  if (!item) return { title: '포트폴리오 상세' };
-  const title = `${item.title} | THE OPENING SIGN 포트폴리오`;
-  const description = `${item.location || ''} ${item.type || ''} ${item.completedAt ? (() => { const [y, m] = item.completedAt.split('-'); return `${y}년 ${Number(m)}월`; })() : ''}`.trim();
+  if (!item) return { 
+    title: '포트폴리오 상세 | 더오프닝사인 THE OPENING SIGN',
+    description: '더오프닝사인 THE OPENING SIGN의 병원 간판 시공 포트폴리오',
+  };
+  const title = `${item.title} | 더오프닝사인 THE OPENING SIGN 포트폴리오`;
+  const description = `${item.title} ${item.location ? `- ${item.location}` : ''} ${item.type ? `| ${item.type}` : ''} ${item.completedAt ? (() => { const [y, m] = item.completedAt.split('-'); return `${y}년 ${Number(m)}월 시공`; })() : ''} | 더오프닝사인 THE OPENING SIGN의 병원 간판 시공 포트폴리오`.trim();
   return {
     title,
     description,
+    keywords: ["더오프닝사인", "THE OPENING SIGN", item.title, item.location, item.type, "병원 간판", "병원 간판 시공"].filter(Boolean),
     openGraph: {
       title,
       description,

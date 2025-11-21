@@ -13,8 +13,9 @@ const notoSans = Noto_Sans_KR({
 });
 
 export const metadata: Metadata = {
-  title: "THE OPENING SIGN | 병원 간판의 새로운 기준",
-  description: "병원 간판 포트폴리오",
+  title: "더오프닝사인 THE OPENING SIGN | 병원 간판 전문 제작 포트폴리오",
+  description: "더오프닝사인 THE OPENING SIGN은 병원 간판 전문 제작 업체입니다. LED채널, 아크릴, 네온, 복합 간판 등 다양한 병원 간판 시공 포트폴리오를 확인하세요.",
+  keywords: ["더오프닝사인", "THE OPENING SIGN", "병원 간판", "병원 간판 제작", "병원 간판 시공", "LED채널 간판", "아크릴 간판", "네온 간판", "병원 간판 포트폴리오"],
   icons: {
     icon: [
       { url: "/onlylogo.png?v=2" },
@@ -23,13 +24,13 @@ export const metadata: Metadata = {
     apple: [{ url: "/onlylogo.png?v=2" }],
   },
   openGraph: {
-    title: "THE OPENING SIGN | 병원 간판의 새로운 기준",
-    description: "병원 간판 포트폴리오",
-    url: process.env.SITE_URL || "https://example.com",
-    siteName: "THE OPENING SIGN",
+    title: "더오프닝사인 THE OPENING SIGN | 병원 간판 전문 제작 포트폴리오",
+    description: "더오프닝사인 THE OPENING SIGN은 병원 간판 전문 제작 업체입니다. LED채널, 아크릴, 네온, 복합 간판 등 다양한 병원 간판 시공 포트폴리오를 확인하세요.",
+    url: process.env.SITE_URL || "https://theopeningsign.vercel.app",
+    siteName: "더오프닝사인 THE OPENING SIGN",
     type: "website",
   },
-  metadataBase: new URL(process.env.SITE_URL || "http://localhost:3000"),
+  metadataBase: new URL(process.env.SITE_URL || "https://theopeningsign.vercel.app"),
 };
 
 export default function RootLayout({
@@ -44,6 +45,8 @@ export default function RootLayout({
         <link rel="preconnect" href="https://secure.notion-static.com" />
         <link rel="preconnect" href="https://s3.us-west-2.amazonaws.com" />
         <link rel="preconnect" href="https://prod-files-secure.s3.us-west-2.amazonaws.com" />
+        {/* 네이버 검색 최적화 */}
+        <meta name="naver-site-verification" content="" />
       </head>
       <body className={`${notoSans.variable} antialiased bg-white text-slate-800`}>
         <ScrollRestoration />
