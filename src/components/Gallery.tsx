@@ -13,7 +13,7 @@ interface Props {
 }
 
 // 개별 이미지 컴포넌트
-const GalleryImageItem = memo(function GalleryImageItem({ src, alt }: { src: string; alt: string }) {
+const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = false }: { src: string; alt: string; priority?: boolean }) {
 	const [imgLoading, setImgLoading] = useState(true);
 	const [imgError, setImgError] = useState(false);
 	const hasLoadedRef = useRef(false);
@@ -75,7 +75,8 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt }: { src: str
 				fill 
 				className={`object-cover transition-transform group-hover:scale-[1.03] ${hasLoadedRef.current ? 'opacity-100' : (imgLoading ? 'opacity-0' : 'opacity-100')} ${hasLoadedRef.current ? '' : 'transition-opacity duration-200'}`}
 				unoptimized={src ? isNotionImageUrl(src) : false}
-				loading="lazy"
+				priority={priority}
+				loading={priority ? undefined : 'lazy'}
 				onLoad={handleLoad}
 				onError={handleError}
 				onLoadingComplete={() => {
@@ -88,7 +89,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt }: { src: str
 			/>
 		</>
 	);
-}, (prevProps, nextProps) => prevProps.src === nextProps.src);
+}, (prevProps, nextProps) => prevProps.src === nextProps.src && prevProps.priority === nextProps.priority);
 
 export default function Gallery({ images, covers, cover }: Props) {
 	const [open, setOpen] = useState(false);
@@ -114,14 +115,21 @@ export default function Gallery({ images, covers, cover }: Props) {
 	return (
 		<div>
 			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-				{images.map((src, i) => (
-					<button key={i} className="group relative aspect-[4/3] overflow-hidden rounded-lg border" onClick={() => handleImageClick(i)}>
-						<GalleryImageItem 
-							src={src || '/placeholder.svg'} 
-							alt={`추가 이미지 ${i+1}`} 
-						/>
-					</button>
-				))}
+				{images.map((src, i) => {
+					// 첫 줄만 priority: 모바일(1개), 태블릿(2개), PC(3개)
+					const isFirstRow = i < 3; // PC 기준 첫 줄 (3개)
+					const priority = isFirstRow;
+					
+					return (
+						<button key={i} className="group relative aspect-[4/3] overflow-hidden rounded-lg border" onClick={() => handleImageClick(i)}>
+							<GalleryImageItem 
+								src={src || '/placeholder.svg'} 
+								alt={`추가 이미지 ${i+1}`}
+								priority={priority}
+							/>
+						</button>
+					);
+				})}
 			</div>
 			{open && <Lightbox images={allImages} initialIndex={index} onClose={() => setOpen(false)} />}
 		</div>

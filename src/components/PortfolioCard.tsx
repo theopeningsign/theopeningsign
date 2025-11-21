@@ -16,9 +16,14 @@ function PortfolioCard({ item, priority = false }: Props) {
 	const [imgError, setImgError] = useState(false);
 	const [imgLoading, setImgLoading] = useState(true);
 	const hasLoadedRef = useRef(false); // 이미지가 한 번 로드되었는지 추적
+	const forceShowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 	const handleImageError = () => {
 		// 이미지 로드 실패 시 바로 placeholder로 전환
+		if (forceShowTimeoutRef.current) {
+			clearTimeout(forceShowTimeoutRef.current);
+			forceShowTimeoutRef.current = null;
+		}
 		setImgError(true);
 		setImgLoading(false);
 		hasLoadedRef.current = true; // 에러가 나도 로드 시도는 완료된 것으로 간주
@@ -27,6 +32,10 @@ function PortfolioCard({ item, priority = false }: Props) {
 	const handleImageLoad = () => {
 		// 이미지가 한 번 로드되면 영구적으로 로딩 완료 상태 유지
 		if (!hasLoadedRef.current) {
+			if (forceShowTimeoutRef.current) {
+				clearTimeout(forceShowTimeoutRef.current);
+				forceShowTimeoutRef.current = null;
+			}
 			setImgLoading(false);
 			setImgError(false);
 			hasLoadedRef.current = true;
@@ -39,11 +48,35 @@ function PortfolioCard({ item, priority = false }: Props) {
 		// URL이 실제로 변경된 경우에만 리셋
 		if (prevUrlRef.current !== item.coverImageUrl) {
 			prevUrlRef.current = item.coverImageUrl;
+			if (forceShowTimeoutRef.current) {
+				clearTimeout(forceShowTimeoutRef.current);
+				forceShowTimeoutRef.current = null;
+			}
 			setImgError(false);
 			setImgLoading(true);
 			hasLoadedRef.current = false;
 		}
 	}, [item.coverImageUrl]);
+
+	// 모바일 네트워크 지연 대응: 일정 시간 후에도 로드되지 않으면 강제로 보이게 함
+	useEffect(() => {
+		if (item.coverImageUrl && !hasLoadedRef.current && !imgError) {
+			forceShowTimeoutRef.current = setTimeout(() => {
+				if (!hasLoadedRef.current && !imgError) {
+					// 이미지가 로드되지 않았어도 일단 보이게 함 (새로고침 후에는 보일 것)
+					setImgLoading(false);
+					hasLoadedRef.current = true;
+				}
+			}, 1000); // 1초 후 강제로 보이게 함 (모바일 네트워크 지연 고려)
+
+			return () => {
+				if (forceShowTimeoutRef.current) {
+					clearTimeout(forceShowTimeoutRef.current);
+					forceShowTimeoutRef.current = null;
+				}
+			};
+		}
+	}, [item.coverImageUrl, imgError]);
 
 	// 상세 페이지로는 Notion 원본 page.id를 그대로 전달 (하이픈 포함)
 	const href = item.id ? `/portfolio/${encodeURIComponent(item.id)}` : '#';
@@ -82,6 +115,16 @@ function PortfolioCard({ item, priority = false }: Props) {
 					blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMTAwJScgaGVpZ2h0PScxMDAlJyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnLz4="
 					onError={handleImageError}
 					onLoad={handleImageLoad}
+					onLoadingComplete={() => {
+						if (!hasLoadedRef.current) {
+							if (forceShowTimeoutRef.current) {
+								clearTimeout(forceShowTimeoutRef.current);
+								forceShowTimeoutRef.current = null;
+							}
+							setImgLoading(false);
+							hasLoadedRef.current = true;
+						}
+					}}
 					unoptimized={imgError || (item.coverImageUrl ? isNotionImageUrl(item.coverImageUrl) : false)} // Notion 이미지만 최적화 비활성화 (Vercel Cache Writes 초과 방지)
 					priority={priority} // 첫 화면에 보이는 이미지만 priority
 					loading={priority ? undefined : 'lazy'} // priority가 아닌 경우 lazy loading

@@ -13,7 +13,7 @@ export default async function PortfolioPage() {
 					<PortfolioCard 
 						key={item.id} 
 						item={item} 
-						priority={index < 15} // 첫 15개 priority (더 많은 이미지 미리 로드)
+						priority={index < 12} // 첫 12개 priority
 					/>
 				))}
 				{items.length === 0 && (
