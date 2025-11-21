@@ -72,10 +72,11 @@ export async function generateMetadata({ params }: MetadataProps): Promise<Metad
   };
   const title = `${item.title} | 더오프닝사인 THE OPENING SIGN 포트폴리오`;
   const description = `${item.title} ${item.location ? `- ${item.location}` : ''} ${item.type ? `| ${item.type}` : ''} ${item.completedAt ? (() => { const [y, m] = item.completedAt.split('-'); return `${y}년 ${Number(m)}월 시공`; })() : ''} | 더오프닝사인 THE OPENING SIGN의 병원 간판 시공 포트폴리오`.trim();
+  const keywords = ["더오프닝사인", "THE OPENING SIGN", item.title, item.location, item.type, "병원 간판", "병원 간판 시공"].filter((k): k is string => Boolean(k));
   return {
     title,
     description,
-    keywords: ["더오프닝사인", "THE OPENING SIGN", item.title, item.location, item.type, "병원 간판", "병원 간판 시공"].filter(Boolean),
+    keywords,
     openGraph: {
       title,
       description,

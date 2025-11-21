@@ -65,7 +65,12 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
 
     // 초기 마운트 시 이미지가 이미 로드되었는지 확인 (캐시된 이미지 대응)
     useEffect(() => {
-        if (cover && !hasLoadedRef.current) {
+        // 이미 로드된 이미지는 아무것도 하지 않음 (무한 루프 방지)
+        if (hasLoadedRef.current) {
+            return;
+        }
+        
+        if (cover) {
             // 최후의 안전장치: 일정 시간 후에도 로드되지 않으면 강제로 보이게 함
             const forceShowTimeout = setTimeout(() => {
                 if (!hasLoadedRef.current && !imgError) {
@@ -80,7 +85,7 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
 
             return () => clearTimeout(forceShowTimeout);
         }
-    }, [cover, imgError]);
+    }, [cover]);
 
     // 클릭한 이미지가 전체 리스트에서 몇 번째인지 계산
     // covers 배열에서 cover의 인덱스를 찾거나, 전달받은 coverIndex 사용
