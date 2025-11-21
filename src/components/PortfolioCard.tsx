@@ -10,13 +10,16 @@ import { isNotionImageUrl } from '@/lib/notion';
 interface Props {
 	item: PortfolioItem;
 	priority?: boolean; // 첫 화면에 보이는 이미지에만 priority 적용
+	onPriorityLoad?: () => void; // priority 이미지 로드 완료 시 호출
+	showPriorityImages?: boolean; // priority 이미지들을 보여줄지 여부
 }
 
-function PortfolioCard({ item, priority = false }: Props) {
+function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityImages = true }: Props) {
 	const [imgError, setImgError] = useState(false);
 	const [imgLoading, setImgLoading] = useState(true);
 	const hasLoadedRef = useRef(false); // 이미지가 한 번 로드되었는지 추적
 	const forceShowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const hasNotifiedRef = useRef(false); // priority 이미지 로드 완료 알림 여부
 
 	const handleImageError = () => {
 		// 이미지 로드 실패 시 바로 placeholder로 전환
@@ -27,6 +30,12 @@ function PortfolioCard({ item, priority = false }: Props) {
 		setImgError(true);
 		setImgLoading(false);
 		hasLoadedRef.current = true; // 에러가 나도 로드 시도는 완료된 것으로 간주
+		
+		// priority 이미지이고 아직 알림하지 않았다면 부모에게 알림 (에러도 로드 완료로 간주)
+		if (priority && onPriorityLoad && !hasNotifiedRef.current) {
+			hasNotifiedRef.current = true;
+			onPriorityLoad();
+		}
 	};
 
 	const handleImageLoad = () => {
@@ -39,6 +48,12 @@ function PortfolioCard({ item, priority = false }: Props) {
 			setImgLoading(false);
 			setImgError(false);
 			hasLoadedRef.current = true;
+			
+			// priority 이미지이고 아직 알림하지 않았다면 부모에게 알림
+			if (priority && onPriorityLoad && !hasNotifiedRef.current) {
+				hasNotifiedRef.current = true;
+				onPriorityLoad();
+			}
 		}
 	};
 
@@ -58,6 +73,36 @@ function PortfolioCard({ item, priority = false }: Props) {
 		}
 	}, [item.coverImageUrl]);
 
+	// 브라우저 캐시에 이미지가 있는지 확인 (뒤로가기 등으로 돌아왔을 때 대응)
+	useEffect(() => {
+		if (item.coverImageUrl && priority && onPriorityLoad && !hasNotifiedRef.current && typeof window !== 'undefined') {
+			const img = document.createElement('img');
+			img.onload = () => {
+				// 이미지가 캐시에 있으면 즉시 로드 완료 처리
+				if (!hasLoadedRef.current) {
+					setImgLoading(false);
+					setImgError(false);
+					hasLoadedRef.current = true;
+					
+					// priority 이미지 로드 완료 알림
+					if (!hasNotifiedRef.current) {
+						hasNotifiedRef.current = true;
+						onPriorityLoad();
+					}
+				}
+			};
+			img.onerror = () => {
+				// 에러는 무시 (나중에 실제 Image 컴포넌트에서 처리)
+			};
+			img.src = item.coverImageUrl;
+			
+			return () => {
+				img.onload = null;
+				img.onerror = null;
+			};
+		}
+	}, [item.coverImageUrl, priority, onPriorityLoad]);
+
 	// 모바일 네트워크 지연 대응: 일정 시간 후에도 로드되지 않으면 강제로 보이게 함
 	useEffect(() => {
 		if (item.coverImageUrl && !hasLoadedRef.current && !imgError) {
@@ -66,6 +111,12 @@ function PortfolioCard({ item, priority = false }: Props) {
 					// 이미지가 로드되지 않았어도 일단 보이게 함 (새로고침 후에는 보일 것)
 					setImgLoading(false);
 					hasLoadedRef.current = true;
+					
+					// priority 이미지이고 아직 알림하지 않았다면 알림 (타임아웃도 로드 완료로 간주)
+					if (priority && onPriorityLoad && !hasNotifiedRef.current) {
+						hasNotifiedRef.current = true;
+						onPriorityLoad();
+					}
 				}
 			}, 1000); // 1초 후 강제로 보이게 함 (모바일 네트워크 지연 고려)
 
@@ -76,7 +127,7 @@ function PortfolioCard({ item, priority = false }: Props) {
 				}
 			};
 		}
-	}, [item.coverImageUrl, imgError]);
+	}, [item.coverImageUrl, imgError, priority, onPriorityLoad]);
 
 	// 상세 페이지로는 Notion 원본 page.id를 그대로 전달 (하이픈 포함)
 	const href = item.id ? `/portfolio/${encodeURIComponent(item.id)}` : '#';
@@ -103,14 +154,14 @@ function PortfolioCard({ item, priority = false }: Props) {
 			style={{ borderColor: '#FAD2BE' }}
 		>
 			<div className="relative aspect-[4/3] w-full">
-				{imgLoading && !hasLoadedRef.current && (
-					<div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
-				)}
+				<div className={`absolute inset-0 z-10 flex items-center justify-center bg-slate-100 transition-opacity duration-300 ${(imgLoading && !hasLoadedRef.current) || (priority && !showPriorityImages) ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+					<div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-orange-400" />
+				</div>
 				<Image
 					src={imgError ? '/placeholder.svg' : (item.coverImageUrl || '/placeholder.svg')}
 					alt={item.title}
 					fill
-					className={`object-cover transition-opacity duration-200 ${imgLoading ? 'opacity-0' : 'opacity-100'}`}
+					className={`object-cover transition-opacity duration-300 ${imgLoading || (priority && !showPriorityImages) ? 'opacity-0' : 'opacity-100'}`}
 					placeholder="blur"
 					blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMTAwJScgaGVpZ2h0PScxMDAlJyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnLz4="
 					onError={handleImageError}
@@ -140,7 +191,8 @@ export default memo(PortfolioCard, (prevProps, nextProps) => {
 	return (
 		prevProps.item.id === nextProps.item.id &&
 		prevProps.item.coverImageUrl === nextProps.item.coverImageUrl &&
-		prevProps.priority === nextProps.priority
+		prevProps.priority === nextProps.priority &&
+		prevProps.showPriorityImages === nextProps.showPriorityImages
 	);
 });
 

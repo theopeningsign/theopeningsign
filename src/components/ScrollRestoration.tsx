@@ -8,6 +8,7 @@ export default function ScrollRestoration() {
 	const hasRestored = useRef(false);
 
 	useEffect(() => {
+
 		// 포트폴리오 상세 페이지에서 reloadScrollPosition 복원 (이미지 로드 실패로 인한 새로고침)
 		if (pathname?.startsWith('/portfolio/') && pathname !== '/portfolio') {
 			const reloadScrollPosition = sessionStorage.getItem('reloadScrollPosition');

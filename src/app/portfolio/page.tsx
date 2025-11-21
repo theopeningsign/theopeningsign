@@ -1,4 +1,4 @@
-import PortfolioCard from '@/components/PortfolioCard';
+import PortfolioGrid from '@/components/PortfolioGrid';
 import { getPortfolios } from '@/lib/notion';
 import type { Metadata } from 'next';
 
@@ -15,18 +15,7 @@ export default async function PortfolioPage() {
 
 	return (
 		<div className="space-y-8">
-			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-				{items.map((item, index) => (
-					<PortfolioCard 
-						key={item.id} 
-						item={item} 
-						priority={index < 12} // 첫 12개 priority
-					/>
-				))}
-				{items.length === 0 && (
-					<div className="col-span-full rounded-lg border border-dashed p-10 text-center text-slate-500">표시할 포트폴리오가 없습니다.</div>
-				)}
-			</div>
+			<PortfolioGrid items={items} priorityCount={12} />
 		</div>
 	);
 }
