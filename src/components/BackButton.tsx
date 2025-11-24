@@ -55,7 +55,9 @@ export default function BackButton() {
 		sessionStorage.setItem('shouldRestoreScroll', 'true');
 		// 현재 스크롤 위치 저장 (상세 페이지에서)
 		sessionStorage.setItem('portfolioScrollPosition', window.scrollY.toString());
-		router.push('/portfolio');
+		const storedPage = sessionStorage.getItem('portfolioCurrentPage');
+		const target = storedPage && Number.parseInt(storedPage, 10) > 1 ? `/portfolio?page=${storedPage}` : '/portfolio';
+		router.push(target);
 	};
 
 	return (

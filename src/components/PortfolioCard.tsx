@@ -12,9 +12,10 @@ interface Props {
 	priority?: boolean; // 첫 화면에 보이는 이미지에만 priority 적용
 	onPriorityLoad?: () => void; // priority 이미지 로드 완료 시 호출
 	showPriorityImages?: boolean; // priority 이미지들을 보여줄지 여부
+	currentPage?: number;
 }
 
-function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityImages = true }: Props) {
+function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityImages = true, currentPage = 1 }: Props) {
 	const [imgError, setImgError] = useState(false);
 	const [imgLoading, setImgLoading] = useState(true);
 	const hasLoadedRef = useRef(false); // 이미지가 한 번 로드되었는지 추적
@@ -166,6 +167,7 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 		sessionStorage.setItem('portfolioScrollPosition', scrollTop.toString());
 		sessionStorage.setItem('portfolioCardId', item.id);
 		sessionStorage.setItem('portfolioCardTop', cardTop.toString());
+		sessionStorage.setItem('portfolioCurrentPage', currentPage.toString());
 	};
 
 	return (

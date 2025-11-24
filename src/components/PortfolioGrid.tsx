@@ -7,9 +7,10 @@ import { PortfolioItem } from '@/lib/types';
 interface Props {
 	items: PortfolioItem[];
 	priorityCount?: number; // priority 이미지 개수 (기본값: 12, PC 기준)
+	currentPage?: number;
 }
 
-export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
+export default function PortfolioGrid({ items, priorityCount = 12, currentPage = 1 }: Props) {
 	const [actualPriorityCount, setActualPriorityCount] = useState(priorityCount);
 
 	// 화면 크기에 따라 priority 개수 조정 (모바일 최적화)
@@ -148,7 +149,7 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 	return (
 		<div className="mx-auto w-full max-w-[1100px] px-4 sm:px-6">
 			<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-			{items.map((item, index) => {
+				{items.map((item, index) => {
 				const isPriority = index < actualPriorityCount;
 				return (
 					<PortfolioCard
@@ -157,6 +158,7 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 						priority={isPriority}
 						onPriorityLoad={isPriority ? handlePriorityLoad : undefined}
 						showPriorityImages={showPriorityImages}
+							currentPage={currentPage}
 					/>
 				);
 			})}

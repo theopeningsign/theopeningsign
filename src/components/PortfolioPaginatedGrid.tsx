@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import PortfolioGrid from '@/components/PortfolioGrid';
 import type { PortfolioItem } from '@/lib/types';
 
 interface Props {
 	items: PortfolioItem[];
 }
+
+const STORAGE_KEY = 'portfolioCurrentPage';
 
 const getItemsPerPage = (width?: number) => {
 	if (typeof width !== 'number') return 9;
@@ -16,8 +19,11 @@ const getItemsPerPage = (width?: number) => {
 };
 
 export default function PortfolioPaginatedGrid({ items }: Props) {
+	const searchParams = useSearchParams();
+	const router = useRouter();
 	const [itemsPerPage, setItemsPerPage] = useState(9);
 	const [currentPage, setCurrentPage] = useState(1);
+	const hasRestoredPage = useRef(false);
 
 	// 화면 크기에 따라 페이지당 아이템 수 결정
 	useEffect(() => {
@@ -36,6 +42,7 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 	// 페이지당 개수가 바뀌면 첫 페이지로 이동
 	useEffect(() => {
 		setCurrentPage(1);
+		hasRestoredPage.current = false;
 	}, [itemsPerPage, items.length]);
 
 	const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
@@ -44,6 +51,29 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 	useEffect(() => {
 		setCurrentPage((prev) => Math.min(prev, totalPages));
 	}, [totalPages]);
+
+	// URL 혹은 sessionStorage로부터 페이지 복원
+	useEffect(() => {
+		if (typeof window === 'undefined' || hasRestoredPage.current) return;
+		const paramPage = Number.parseInt(searchParams.get('page') || '', 10);
+		const stored = Number.isFinite(paramPage)
+			? paramPage
+			: Number.parseInt(sessionStorage.getItem(STORAGE_KEY) || '', 10);
+		if (Number.isFinite(stored)) {
+			setCurrentPage(() => {
+				if (stored < 1) return 1;
+				if (stored > totalPages) return totalPages;
+				return stored;
+			});
+		}
+		hasRestoredPage.current = true;
+	}, [totalPages, searchParams]);
+
+	// 현재 페이지 저장 (복원 완료 후에만)
+	useEffect(() => {
+		if (typeof window === 'undefined' || !hasRestoredPage.current) return;
+		sessionStorage.setItem(STORAGE_KEY, currentPage.toString());
+	}, [currentPage]);
 
 	const currentItems = useMemo(() => {
 		const start = (currentPage - 1) * itemsPerPage;
@@ -56,6 +86,7 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 		if (typeof window !== 'undefined') {
 			window.scrollTo({ top: 0, behavior: 'smooth' });
 		}
+		router.replace(page === 1 ? '?' : `?page=${page}`, { scroll: false });
 	};
 
 	const pageNumbers = useMemo(() => {
@@ -73,7 +104,11 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 
 	return (
 		<div className="space-y-8">
-			<PortfolioGrid items={currentItems} priorityCount={Math.min(itemsPerPage, 12)} />
+			<PortfolioGrid
+				items={currentItems}
+				priorityCount={Math.min(itemsPerPage, 12)}
+				currentPage={currentPage}
+			/>
 
 			{totalPages > 1 && (
 				<div className="flex flex-wrap items-center justify-center gap-2">
