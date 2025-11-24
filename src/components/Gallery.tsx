@@ -64,6 +64,51 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 		}
 	}, [src, imgError]);
 
+	// 탭이 포그라운드로 돌아올 때 이미지 로딩 상태 재확인 (백그라운드에서 실패한 경우 대응)
+	useEffect(() => {
+		if (typeof window === 'undefined' || !src) return;
+		
+		const handleVisibilityChange = () => {
+			// 탭이 포그라운드로 돌아왔고, 이미지가 아직 로드되지 않았을 때만 재확인
+			if (document.visibilityState === 'visible' && !hasLoadedRef.current && imgLoading) {
+				// 약간의 지연을 두어 브라우저가 네트워크를 다시 활성화할 시간을 줌
+				setTimeout(() => {
+					if (!hasLoadedRef.current && src) {
+						const img = document.createElement('img');
+						img.onload = () => {
+							if (!hasLoadedRef.current) {
+								setImgLoading(false);
+								setImgError(false);
+								hasLoadedRef.current = true;
+								if (src) {
+									sessionStorage.setItem(`img_loaded_${src}`, 'true');
+								}
+							}
+						};
+						img.onerror = () => {
+							// 재확인 실패 시 기존 에러 처리 로직 호출
+							if (!hasLoadedRef.current) {
+								setImgError(true);
+								setImgLoading(true);
+								if (src) {
+									setTimeout(() => {
+										scheduleImageReload(`img_error_${src}`, router);
+									}, 1000);
+								}
+							}
+						};
+						img.src = src;
+					}
+				}, 300);
+			}
+		};
+
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+		return () => {
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		};
+	}, [src, imgLoading]);
+
 	const handleLoad = () => {
 		// 이미지가 로드되면 영구적으로 로딩 완료 상태 유지
 		setImgLoading(false);

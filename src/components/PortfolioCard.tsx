@@ -108,6 +108,48 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 		}
 	}, [priority, showPriorityImages, imgLoading]);
 
+	// 탭이 포그라운드로 돌아올 때 이미지 로딩 상태 재확인 (백그라운드에서 실패한 경우 대응)
+	useEffect(() => {
+		if (typeof window === 'undefined' || !item.coverImageUrl) return;
+		
+		const handleVisibilityChange = () => {
+			// 탭이 포그라운드로 돌아왔고, 이미지가 아직 로드되지 않았을 때만 재확인
+			if (document.visibilityState === 'visible' && !hasLoadedRef.current && imgLoading) {
+				// 약간의 지연을 두어 브라우저가 네트워크를 다시 활성화할 시간을 줌
+				setTimeout(() => {
+					if (!hasLoadedRef.current && item.coverImageUrl) {
+						const img = document.createElement('img');
+						img.onload = () => {
+							if (!hasLoadedRef.current) {
+								setImgLoading(false);
+								setImgError(false);
+								hasLoadedRef.current = true;
+								
+								// priority 이미지 로드 완료 알림
+								if (priority && onPriorityLoad && !hasNotifiedRef.current) {
+									hasNotifiedRef.current = true;
+									onPriorityLoad();
+								}
+							}
+						};
+						img.onerror = () => {
+							// 재확인 실패 시 기존 에러 처리 로직 호출
+							if (!hasLoadedRef.current) {
+								handleImageError();
+							}
+						};
+						img.src = item.coverImageUrl;
+					}
+				}, 300);
+			}
+		};
+
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+		return () => {
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		};
+	}, [item.coverImageUrl, imgLoading, priority, onPriorityLoad]);
+
 	// 타임아웃 제거: 에러가 나도 스피너를 계속 보여주기 위해 강제 표시하지 않음
 
 	// 상세 페이지로는 Notion 원본 page.id를 그대로 전달 (하이픈 포함)

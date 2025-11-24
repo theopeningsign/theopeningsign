@@ -106,6 +106,55 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
         }
     }, [cover, imgError]);
 
+    // 탭이 포그라운드로 돌아올 때 이미지 로딩 상태 재확인 (백그라운드에서 실패한 경우 대응)
+    useEffect(() => {
+        if (typeof window === 'undefined' || !cover) return;
+        
+        const handleVisibilityChange = () => {
+            // 탭이 포그라운드로 돌아왔고, 이미지가 아직 로드되지 않았을 때만 재확인
+            if (document.visibilityState === 'visible' && !hasLoadedRef.current && imgLoading) {
+                // 약간의 지연을 두어 브라우저가 네트워크를 다시 활성화할 시간을 줌
+                setTimeout(() => {
+                    if (!hasLoadedRef.current && cover) {
+                        const img = document.createElement('img');
+                        img.onload = () => {
+                            if (!hasLoadedRef.current) {
+                                setImgLoading(false);
+                                setImgError(false);
+                                hasLoadedRef.current = true;
+                                if (cover) {
+                                    sessionStorage.setItem(`img_loaded_${cover}`, 'true');
+                                }
+                                if (loadTimeoutRef.current) {
+                                    clearTimeout(loadTimeoutRef.current);
+                                }
+                            }
+                        };
+                        img.onerror = () => {
+                            // 재확인 실패 시 기존 에러 처리 로직 호출
+                            if (!hasLoadedRef.current) {
+                                setImgError(true);
+                                setImgLoading(true);
+                                const errorKey = cover ? `img_error_${cover}` : '';
+                                if (errorKey) {
+                                    setTimeout(() => {
+                                        scheduleImageReload(errorKey, router);
+                                    }, 1000);
+                                }
+                            }
+                        };
+                        img.src = cover;
+                    }
+                }, 300);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [cover, imgLoading]);
+
     // 클릭한 이미지가 전체 리스트에서 몇 번째인지 계산
     // covers 배열에서 cover의 인덱스를 찾거나, 전달받은 coverIndex 사용
     const getInitialIndex = () => {
