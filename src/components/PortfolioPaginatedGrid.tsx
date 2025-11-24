@@ -117,9 +117,10 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 							type="button"
 							onClick={() => handlePageChange(currentPage - 1)}
 							disabled={currentPage === 1}
-							className="min-w-[72px] flex-1 rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition disabled:cursor-not-allowed disabled:opacity-40 hover:border-orange-300 hover:text-orange-500 sm:flex-none sm:px-4"
+							className="min-w-[56px] flex-1 rounded-full border border-slate-200 px-2 py-2 text-sm font-medium text-slate-600 transition disabled:cursor-not-allowed disabled:opacity-40 hover:border-orange-300 hover:text-orange-500 sm:flex-none sm:min-w-[72px] sm:px-4"
 						>
-							이전
+							<span className="sm:hidden text-lg leading-none">&lsaquo;</span>
+							<span className="hidden sm:inline">이전</span>
 						</button>
 
 						<div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2">
@@ -143,9 +144,10 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 							type="button"
 							onClick={() => handlePageChange(currentPage + 1)}
 							disabled={currentPage === totalPages}
-							className="min-w-[72px] flex-1 rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition disabled:cursor-not-allowed disabled:opacity-40 hover:border-orange-300 hover:text-orange-500 sm:flex-none sm:px-4"
+							className="min-w-[56px] flex-1 rounded-full border border-slate-200 px-2 py-2 text-sm font-medium text-slate-600 transition disabled:cursor-not-allowed disabled:opacity-40 hover:border-orange-300 hover:text-orange-500 sm:flex-none sm:min-w-[72px] sm:px-4"
 						>
-							다음
+							<span className="sm:hidden text-lg leading-none">&rsaquo;</span>
+							<span className="hidden sm:inline">다음</span>
 						</button>
 					</div>
 
