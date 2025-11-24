@@ -86,16 +86,8 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 							}
 						};
 						img.onerror = () => {
-							// 재확인 실패 시 기존 에러 처리 로직 호출
-							if (!hasLoadedRef.current) {
-								setImgError(true);
-								setImgLoading(true);
-								if (src) {
-									setTimeout(() => {
-										scheduleImageReload(`img_error_${src}`, router);
-									}, 1000);
-								}
-							}
+							// 재확인 실패 시 아무것도 하지 않음 (무한 루프 방지)
+							// 실제 에러 처리는 기존 onError에서만 수행
 						};
 						img.src = src;
 					}
@@ -156,6 +148,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 					loading={priority ? undefined : 'lazy'}
 					onLoad={handleLoad}
 					onError={handleError}
+					style={{ visibility: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'hidden' : 'visible' }}
 				/>
 			)}
 		</>

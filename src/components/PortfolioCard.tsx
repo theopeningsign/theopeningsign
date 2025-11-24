@@ -193,6 +193,7 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 					priority={priority} // 첫 화면에 보이는 이미지만 priority
 					loading={priority ? undefined : 'lazy'} // priority가 아닌 경우 lazy loading
 					sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" // 반응형 이미지 크기 힌트
+					style={{ visibility: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) || (priority && !showPriorityImages) ? 'hidden' : 'visible' }}
 				/>
 				<div className="absolute inset-0 bg-slate-900/0 transition-colors group-hover:bg-slate-900/20" />
 				<div className="absolute inset-x-0 bottom-0 translate-y-2 px-3 pb-3 opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100">

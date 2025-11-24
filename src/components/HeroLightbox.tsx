@@ -131,17 +131,8 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                             }
                         };
                         img.onerror = () => {
-                            // 재확인 실패 시 기존 에러 처리 로직 호출
-                            if (!hasLoadedRef.current) {
-                                setImgError(true);
-                                setImgLoading(true);
-                                const errorKey = cover ? `img_error_${cover}` : '';
-                                if (errorKey) {
-                                    setTimeout(() => {
-                                        scheduleImageReload(errorKey, router);
-                                    }, 1000);
-                                }
-                            }
+                            // 재확인 실패 시 아무것도 하지 않음 (무한 루프 방지)
+                            // 실제 에러 처리는 기존 onError에서만 수행
                         };
                         img.src = cover;
                     }
@@ -222,6 +213,7 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                             }
                         }
                     }}
+                    style={{ visibility: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'hidden' : 'visible' }}
                 />
             )}
             <button
