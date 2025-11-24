@@ -105,7 +105,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 					src={src} 
 					alt={alt} 
 					fill 
-					className={`object-cover transition-opacity duration-200 transition-transform group-hover:scale-[1.03] ${(imgLoading && !hasLoadedRef.current) ? 'opacity-0' : 'opacity-100'}`}
+					className={`object-cover transition-opacity duration-200 transition-transform group-hover:scale-[1.03] ${(imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'opacity-0' : 'opacity-100'} ${imgError && !hasLoadedRef.current ? 'hidden' : ''}`}
 					unoptimized={isNotionImageUrl(src)}
 					priority={priority}
 					loading={priority ? undefined : 'lazy'}

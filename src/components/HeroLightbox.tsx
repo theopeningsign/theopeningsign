@@ -132,7 +132,7 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                     src={cover}
                     alt={title}
                     fill
-                    className={`object-cover transition-opacity duration-200 group-hover:scale-[1.02] ${(imgLoading && !hasLoadedRef.current) ? 'opacity-0' : 'opacity-100'}`}
+                    className={`object-cover transition-opacity duration-200 group-hover:scale-[1.02] ${(imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'opacity-0' : 'opacity-100'} ${imgError && !hasLoadedRef.current ? 'hidden' : ''}`}
                     priority
                     unoptimized={isNotionImageUrl(cover)}
                     onLoad={() => {
