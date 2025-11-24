@@ -111,39 +111,65 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 			/>
 
 			{totalPages > 1 && (
-				<div className="flex flex-wrap items-center justify-center gap-2">
-					<button
-						type="button"
-						onClick={() => handlePageChange(currentPage - 1)}
-						disabled={currentPage === 1}
-						className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition disabled:cursor-not-allowed disabled:opacity-40 hover:border-orange-300 hover:text-orange-500"
-					>
-						이전
-					</button>
-
-					{pageNumbers.map((page) => (
+				<div className="flex flex-col items-center gap-2">
+					<div className="flex w-full flex-wrap items-center justify-center gap-1 sm:gap-2">
 						<button
-							key={page}
 							type="button"
-							onClick={() => handlePageChange(page)}
-							className={`h-9 w-9 rounded-full text-sm font-semibold transition ${
-								page === currentPage
-									? 'bg-orange-500 text-white shadow'
-									: 'border border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-500'
-							}`}
+							onClick={() => handlePageChange(currentPage - 1)}
+							disabled={currentPage === 1}
+							className="min-w-[72px] flex-1 rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition disabled:cursor-not-allowed disabled:opacity-40 hover:border-orange-300 hover:text-orange-500 sm:flex-none sm:px-4"
 						>
-							{page}
+							이전
 						</button>
-					))}
 
-					<button
-						type="button"
-						onClick={() => handlePageChange(currentPage + 1)}
-						disabled={currentPage === totalPages}
-						className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition disabled:cursor-not-allowed disabled:opacity-40 hover:border-orange-300 hover:text-orange-500"
-					>
-						다음
-					</button>
+						<div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2">
+							{pageNumbers.map((page) => (
+								<button
+									key={page}
+									type="button"
+									onClick={() => handlePageChange(page)}
+									className={`h-9 w-9 rounded-full text-sm font-semibold transition ${
+										page === currentPage
+											? 'bg-orange-500 text-white shadow'
+											: 'border border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-500'
+									}`}
+								>
+									{page}
+								</button>
+							))}
+						</div>
+
+						<button
+							type="button"
+							onClick={() => handlePageChange(currentPage + 1)}
+							disabled={currentPage === totalPages}
+							className="min-w-[72px] flex-1 rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition disabled:cursor-not-allowed disabled:opacity-40 hover:border-orange-300 hover:text-orange-500 sm:flex-none sm:px-4"
+						>
+							다음
+						</button>
+					</div>
+
+					<div className="flex w-full items-center justify-between text-sm text-slate-500">
+						<button
+							type="button"
+							onClick={() => handlePageChange(1)}
+							disabled={currentPage === 1}
+							className="flex-1 text-left font-medium text-slate-500 hover:text-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
+						>
+							≪ 첫 페이지
+						</button>
+						<span className="flex-1 text-center text-xs text-slate-400">
+							{currentPage} / {totalPages}
+						</span>
+						<button
+							type="button"
+							onClick={() => handlePageChange(totalPages)}
+							disabled={currentPage === totalPages}
+							className="flex-1 text-right font-medium text-slate-500 hover:text-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
+						>
+							마지막 페이지 ≫
+						</button>
+					</div>
 				</div>
 			)}
 		</div>
