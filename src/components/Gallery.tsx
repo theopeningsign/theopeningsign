@@ -144,7 +144,15 @@ export default function Gallery({ images, covers, cover }: Props) {
 			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{images.map((src, i) => {
 					// 첫 줄만 priority: 모바일(1개), 태블릿(2개), PC(3개)
-					const isFirstRow = i < 3; // PC 기준 첫 줄 (3개)
+					// 화면 크기에 따라 동적으로 계산
+					const getPriorityCount = () => {
+						if (typeof window === 'undefined') return 3; // SSR 기본값
+						const width = window.innerWidth;
+						if (width < 640) return 1; // 모바일 (sm 미만)
+						if (width < 1024) return 2; // 태블릿 (lg 미만)
+						return 3; // PC (lg 이상)
+					};
+					const isFirstRow = i < getPriorityCount();
 					const priority = isFirstRow;
 					
 					return (

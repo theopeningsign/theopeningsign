@@ -6,10 +6,31 @@ import { PortfolioItem } from '@/lib/types';
 
 interface Props {
 	items: PortfolioItem[];
-	priorityCount?: number; // priority 이미지 개수 (기본값: 12)
+	priorityCount?: number; // priority 이미지 개수 (기본값: 12, PC 기준)
 }
 
 export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
+	const [actualPriorityCount, setActualPriorityCount] = useState(priorityCount);
+
+	// 화면 크기에 따라 priority 개수 조정 (모바일 최적화)
+	useEffect(() => {
+		const updatePriorityCount = () => {
+			if (typeof window === 'undefined') return;
+			const width = window.innerWidth;
+			// 모바일: 3개, 태블릿: 6개, PC: 12개 (기본값)
+			if (width < 768) {
+				setActualPriorityCount(3); // 모바일
+			} else if (width < 1024) {
+				setActualPriorityCount(6); // 태블릿
+			} else {
+				setActualPriorityCount(priorityCount); // PC (기본값)
+			}
+		};
+
+		updatePriorityCount();
+		window.addEventListener('resize', updatePriorityCount);
+		return () => window.removeEventListener('resize', updatePriorityCount);
+	}, [priorityCount]);
 	const [loadedPriorityCount, setLoadedPriorityCount] = useState(0);
 	const [showPriorityImages, setShowPriorityImages] = useState(false);
 	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -24,7 +45,7 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 		setLoadedPriorityCount((prev) => {
 			const newCount = prev + 1;
 			// 모든 priority 이미지가 로드되면 전환 시작
-			if (newCount >= priorityCount) {
+			if (newCount >= actualPriorityCount) {
 				// 타임아웃 정리
 				if (timeoutRef.current) {
 					clearTimeout(timeoutRef.current);
@@ -37,7 +58,7 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 			}
 			return newCount;
 		});
-	}, [priorityCount]);
+	}, [actualPriorityCount]);
 
 	// 초기 마운트 시 모든 priority 이미지가 이미 로드되어 있는지 확인 (뒤로가기 등으로 캐시된 이미지 대응)
 	useEffect(() => {
@@ -45,7 +66,7 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 
 		let mounted = true;
 		let checkedCount = 0;
-		const priorityItems = items.slice(0, priorityCount);
+		const priorityItems = items.slice(0, actualPriorityCount);
 
 		// checkAllImages 실행 시작
 		isCheckingRef.current = true;
@@ -122,12 +143,12 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 			}
 			clearTimeout(checkTimeout);
 		};
-	}, [items, priorityCount, showPriorityImages]);
+	}, [items, actualPriorityCount, showPriorityImages]);
 
 	return (
 		<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 			{items.map((item, index) => {
-				const isPriority = index < priorityCount;
+				const isPriority = index < actualPriorityCount;
 				return (
 					<PortfolioCard
 						key={item.id}
