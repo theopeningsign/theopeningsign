@@ -13,8 +13,8 @@ const notoSans = Noto_Sans_KR({
 });
 
 export const metadata: Metadata = {
-  title: "더오프닝사인 THE OPENING SIGN | 병원 간판 전문 제작 포트폴리오",
-  description: "더오프닝사인 THE OPENING SIGN은 병원 간판 전문 제작 업체입니다. LED채널, 아크릴, 네온, 복합 간판 등 다양한 병원 간판 시공 포트폴리오를 확인하세요.",
+  title: "더오프닝사인 THE OPENING SIGN | 병원 간판 전문 업체",
+  description: "더오프닝사인 THE OPENING SIGN은 병원 간판 전문 제작 업체입니다. 다양한 병원 간판 시공 포트폴리오를 확인하세요.",
   keywords: ["더오프닝사인", "THE OPENING SIGN", "병원 간판", "병원 간판 제작", "병원 간판 시공", "병원 간판 포트폴리오"],
   icons: {
     icon: [
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     apple: [{ url: "/onlylogo.png?v=2" }],
   },
   openGraph: {
-    title: "더오프닝사인 THE OPENING SIGN | 병원 간판 전문 제작 포트폴리오",
+    title: "더오프닝사인 THE OPENING SIGN | 병원 간판 전문 업체",
     description: "더오프닝사인 THE OPENING SIGN은 병원 간판 전문 제작 업체입니다. 다양한 병원 간판 시공 포트폴리오를 확인하세요.",
     url: process.env.SITE_URL || "https://theopeningsign.vercel.app",
     siteName: "더오프닝사인 THE OPENING SIGN",
