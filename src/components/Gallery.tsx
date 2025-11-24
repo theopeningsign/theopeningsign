@@ -37,18 +37,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 		}
 		
 		if (src && typeof window !== 'undefined') {
-			// router.refresh() 후에도 상태 유지: sessionStorage에서 로드 상태 확인
-			const loadedKey = `img_loaded_${src}`;
-			const wasLoaded = sessionStorage.getItem(loadedKey) === 'true';
-			
-			if (wasLoaded) {
-				// 이전에 로드된 이미지면 즉시 로드 완료 처리 (refresh 후 깜빡임 방지)
-				setImgLoading(false);
-				setImgError(false);
-				hasLoadedRef.current = true;
-				return;
-			}
-			
+			// sessionStorage는 신뢰하지 않고, 항상 실제 이미지 로드를 확인
 			// 브라우저 캐시에 이미지가 있는지 확인
 			const img = document.createElement('img');
 			img.onload = () => {
@@ -57,23 +46,20 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 					setImgLoading(false);
 					setImgError(false);
 					hasLoadedRef.current = true;
-					// sessionStorage에 로드 상태 저장 (refresh 후 복원용)
+					// sessionStorage에 로드 상태 저장 (refresh 후 복원용, 단기간만 유효)
+					const loadedKey = `img_loaded_${src}`;
 					sessionStorage.setItem(loadedKey, 'true');
 				}
 			};
+			img.onerror = () => {
+				// 캐시에 없으면 로딩 상태 유지 (실제 Image 컴포넌트가 로드 시도)
+			};
 			img.src = src;
 			
-			// 최후의 안전장치: 일정 시간 후에도 로드되지 않으면 강제로 보이게 함 (모바일 네트워크 지연 고려)
-			const forceShowTimeout = setTimeout(() => {
-				if (!hasLoadedRef.current && !imgError) {
-					setImgLoading(false);
-					hasLoadedRef.current = true;
-				}
-			}, 2000); // 2초 후 강제로 보이게 함 (안정성 우선)
+			// 타임아웃 제거: 에러가 나도 스피너를 계속 보여주기 위해 강제 표시하지 않음
 
 			return () => {
 				img.onload = null;
-				clearTimeout(forceShowTimeout);
 			};
 		}
 	}, [src, imgError]);
@@ -92,15 +78,17 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 
 	const handleError = () => {
 		if (!hasLoadedRef.current) {
-			// 에러가 발생해도 원본 이미지를 계속 시도 (안정성 우선)
-			// imgError는 true로 설정하되, 원본 URL은 계속 사용
+			// 에러가 발생해도 스피너를 계속 보여줌 (사용자는 로딩 중인 것으로 인식)
 			setImgError(true);
-			setImgLoading(false);
-			hasLoadedRef.current = true;
+			setImgLoading(true); // 스피너 계속 표시
+			// hasLoadedRef는 true로 설정하지 않아서 재시도 가능하게 함
 
 			// 서버 컴포넌트만 갱신 (부드러운 갱신, 사용자 경험 방해 최소화)
+			// 재시도를 지연시켜서 즉시 상태 리셋 방지
 			if (src) {
-				scheduleImageReload(`img_error_${src}`, router);
+				setTimeout(() => {
+					scheduleImageReload(`img_error_${src}`, router);
+				}, 1000);
 			}
 		}
 	};

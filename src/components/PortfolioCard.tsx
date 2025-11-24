@@ -22,20 +22,16 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 	const hasNotifiedRef = useRef(false); // priority 이미지 로드 완료 알림 여부
 
 	const handleImageError = () => {
-		// 이미지 로드 실패 시 바로 placeholder로 전환
+		// 이미지 로드 실패 시에도 스피너를 계속 보여줌 (사용자는 로딩 중인 것으로 인식)
 		if (forceShowTimeoutRef.current) {
 			clearTimeout(forceShowTimeoutRef.current);
 			forceShowTimeoutRef.current = null;
 		}
 		setImgError(true);
-		setImgLoading(false);
-		hasLoadedRef.current = true; // 에러가 나도 로드 시도는 완료된 것으로 간주
+		setImgLoading(true); // 스피너 계속 표시
+		// hasLoadedRef는 true로 설정하지 않아서 재시도 가능하게 함
 		
-		// priority 이미지이고 아직 알림하지 않았다면 부모에게 알림 (에러도 로드 완료로 간주)
-		if (priority && onPriorityLoad && !hasNotifiedRef.current) {
-			hasNotifiedRef.current = true;
-			onPriorityLoad();
-		}
+		// priority 이미지 알림은 이미지가 실제로 로드될 때만 수행
 	};
 
 	const handleImageLoad = () => {
@@ -75,7 +71,7 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 
 	// 브라우저 캐시에 이미지가 있는지 확인 (뒤로가기 등으로 돌아왔을 때 대응)
 	useEffect(() => {
-		if (item.coverImageUrl && priority && onPriorityLoad && !hasNotifiedRef.current && typeof window !== 'undefined') {
+		if (item.coverImageUrl && !hasLoadedRef.current && typeof window !== 'undefined') {
 			const img = document.createElement('img');
 			img.onload = () => {
 				// 이미지가 캐시에 있으면 즉시 로드 완료 처리
@@ -85,14 +81,14 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 					hasLoadedRef.current = true;
 					
 					// priority 이미지 로드 완료 알림
-					if (!hasNotifiedRef.current) {
+					if (priority && onPriorityLoad && !hasNotifiedRef.current) {
 						hasNotifiedRef.current = true;
 						onPriorityLoad();
 					}
 				}
 			};
 			img.onerror = () => {
-				// 에러는 무시 (나중에 실제 Image 컴포넌트에서 처리)
+				// 캐시에 없으면 로딩 상태 유지 (실제 Image 컴포넌트가 로드 시도)
 			};
 			img.src = item.coverImageUrl;
 			
@@ -112,31 +108,7 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 		}
 	}, [priority, showPriorityImages, imgLoading]);
 
-	// 모바일 네트워크 지연 대응: 일정 시간 후에도 로드되지 않으면 강제로 보이게 함
-	useEffect(() => {
-		if (item.coverImageUrl && !hasLoadedRef.current && !imgError) {
-			forceShowTimeoutRef.current = setTimeout(() => {
-				if (!hasLoadedRef.current && !imgError) {
-					// 이미지가 로드되지 않았어도 일단 보이게 함 (새로고침 후에는 보일 것)
-					setImgLoading(false);
-					hasLoadedRef.current = true;
-					
-					// priority 이미지이고 아직 알림하지 않았다면 알림 (타임아웃도 로드 완료로 간주)
-					if (priority && onPriorityLoad && !hasNotifiedRef.current) {
-						hasNotifiedRef.current = true;
-						onPriorityLoad();
-					}
-				}
-			}, 1000); // 1초 후 강제로 보이게 함 (모바일 네트워크 지연 고려)
-
-			return () => {
-				if (forceShowTimeoutRef.current) {
-					clearTimeout(forceShowTimeoutRef.current);
-					forceShowTimeoutRef.current = null;
-				}
-			};
-		}
-	}, [item.coverImageUrl, imgError, priority, onPriorityLoad]);
+	// 타임아웃 제거: 에러가 나도 스피너를 계속 보여주기 위해 강제 표시하지 않음
 
 	// 상세 페이지로는 Notion 원본 page.id를 그대로 전달 (하이픈 포함)
 	const href = item.id ? `/portfolio/${encodeURIComponent(item.id)}` : '#';
@@ -167,7 +139,7 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 					<div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-orange-400" />
 				</div>
 				<Image
-					src={imgError ? '/placeholder.svg' : (item.coverImageUrl || '/placeholder.svg')}
+					src={item.coverImageUrl || '/placeholder.svg'}
 					alt={item.title}
 					fill
 					className={`object-cover transition-opacity duration-300 ${imgLoading || (priority && !showPriorityImages) ? 'opacity-0' : 'opacity-100'}`}
@@ -175,7 +147,7 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 					blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMTAwJScgaGVpZ2h0PScxMDAlJyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnLz4="
 					onError={handleImageError}
 					onLoad={handleImageLoad}
-					unoptimized={imgError || (item.coverImageUrl ? isNotionImageUrl(item.coverImageUrl) : false)} // Notion 이미지만 최적화 비활성화 (Vercel Cache Writes 초과 방지)
+					unoptimized={item.coverImageUrl ? isNotionImageUrl(item.coverImageUrl) : false} // Notion 이미지만 최적화 비활성화 (Vercel Cache Writes 초과 방지)
 					priority={priority} // 첫 화면에 보이는 이미지만 priority
 					loading={priority ? undefined : 'lazy'} // priority가 아닌 경우 lazy loading
 					sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" // 반응형 이미지 크기 힌트

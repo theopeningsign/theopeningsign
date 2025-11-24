@@ -51,17 +51,7 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                 hasLoadedRef.current = false;
             }
             
-            // 타임아웃: 5초 후에도 로드되지 않으면 에러로 처리
-            if (loadTimeoutRef.current) {
-                clearTimeout(loadTimeoutRef.current);
-            }
-            loadTimeoutRef.current = setTimeout(() => {
-                if (!hasLoadedRef.current) {
-                    setImgError(true);
-                    setImgLoading(false);
-                    hasLoadedRef.current = true;
-                }
-            }, 5000);
+            // 타임아웃 제거: 에러가 나도 스피너를 계속 보여주기 위해 타임아웃으로 로딩 상태를 종료하지 않음
         }
         
         return () => {
@@ -79,21 +69,7 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
         }
         
         if (cover && typeof window !== 'undefined') {
-            // router.refresh() 후에도 상태 유지: sessionStorage에서 로드 상태 확인
-            const loadedKey = `img_loaded_${cover}`;
-            const wasLoaded = sessionStorage.getItem(loadedKey) === 'true';
-            
-            if (wasLoaded) {
-                // 이전에 로드된 이미지면 즉시 로드 완료 처리 (refresh 후 깜빡임 방지)
-                setImgLoading(false);
-                setImgError(false);
-                hasLoadedRef.current = true;
-                if (loadTimeoutRef.current) {
-                    clearTimeout(loadTimeoutRef.current);
-                }
-                return;
-            }
-            
+            // sessionStorage는 신뢰하지 않고, 항상 실제 이미지 로드를 확인
             // 브라우저 캐시에 이미지가 있는지 먼저 확인
             const img = document.createElement('img');
             let cacheChecked = false;
@@ -105,7 +81,8 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                     setImgLoading(false);
                     setImgError(false);
                     hasLoadedRef.current = true;
-                    // sessionStorage에 로드 상태 저장 (refresh 후 복원용)
+                    // sessionStorage에 로드 상태 저장 (refresh 후 복원용, 단기간만 유효)
+                    const loadedKey = `img_loaded_${cover}`;
                     sessionStorage.setItem(loadedKey, 'true');
                     if (loadTimeoutRef.current) {
                         clearTimeout(loadTimeoutRef.current);
@@ -115,26 +92,16 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
             
             img.onerror = () => {
                 cacheChecked = true;
+                // 캐시에 없으면 로딩 상태 유지 (실제 Image 컴포넌트가 로드 시도)
             };
             
             img.src = cover;
             
-            // 최후의 안전장치: 일정 시간 후에도 로드되지 않으면 강제로 보이게 함
-            const forceShowTimeout = setTimeout(() => {
-                if (!hasLoadedRef.current && !imgError && !cacheChecked) {
-                    // 이미지가 로드되지 않았어도 일단 보이게 함 (새로고침 후에는 보일 것)
-                    setImgLoading(false);
-                    hasLoadedRef.current = true;
-                    if (loadTimeoutRef.current) {
-                        clearTimeout(loadTimeoutRef.current);
-                    }
-                }
-            }, 500); // 500ms 후 강제로 보이게 함
+            // 타임아웃 제거: 에러가 나도 스피너를 계속 보여주기 위해 강제 표시하지 않음
 
             return () => {
                 img.onload = null;
                 img.onerror = null;
-                clearTimeout(forceShowTimeout);
             };
         }
     }, [cover, imgError]);
@@ -152,7 +119,7 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
 
     return (
         <div className="group relative w-full aspect-[16/9] overflow-hidden rounded-xl border">
-            {(imgLoading || imgError) && !hasLoadedRef.current && (
+            {imgLoading && !hasLoadedRef.current && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100">
                     <div className="flex flex-col items-center gap-3">
                         <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-orange-400" />
@@ -165,7 +132,7 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                     src={cover}
                     alt={title}
                     fill
-                    className={`object-cover transition-opacity duration-200 group-hover:scale-[1.02] ${(imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'opacity-0' : 'opacity-100'}`}
+                    className={`object-cover transition-opacity duration-200 group-hover:scale-[1.02] ${(imgLoading && !hasLoadedRef.current) ? 'opacity-0' : 'opacity-100'}`}
                     priority
                     unoptimized={isNotionImageUrl(cover)}
                     onLoad={() => {
@@ -192,12 +159,17 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                                 clearTimeout(loadTimeoutRef.current);
                             }
                             setImgError(true);
-                            setImgLoading(true); // 에러 발생해도 로딩 상태 유지 (placeholder 방지)
-                            hasLoadedRef.current = true;
+                            // 에러 발생해도 스피너를 계속 보여줌 (사용자는 로딩 중인 것으로 인식)
+                            setImgLoading(true); // 스피너 계속 표시
+                            // hasLoadedRef는 true로 설정하지 않아서 재시도 가능하게 함
 
+                            // 에러 발생 시 재시도는 지연시켜서 상태 리셋 방지
                             const errorKey = cover ? `img_error_${cover}` : '';
                             if (errorKey) {
-                                scheduleImageReload(errorKey, router);
+                                // 재시도를 1초 후에 수행하여 즉시 상태 리셋 방지
+                                setTimeout(() => {
+                                    scheduleImageReload(errorKey, router);
+                                }, 1000);
                             }
                         }
                     }}

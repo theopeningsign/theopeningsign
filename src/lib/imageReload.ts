@@ -1,7 +1,7 @@
 "use client";
 
 // router를 파라미터로 받아서 refresh하는 방식으로 변경
-export function scheduleImageReload(errorKey: string, router: { refresh: () => void }, delay = 200) {
+export function scheduleImageReload(errorKey: string, router: { refresh: () => void }, delay = 3000) {
 	if (typeof window === 'undefined' || !errorKey) return;
 
 	const hasReloaded = sessionStorage.getItem(errorKey);
@@ -18,7 +18,7 @@ export function scheduleImageReload(errorKey: string, router: { refresh: () => v
 		// refresh 완료 후 플래그 제거 (약간의 지연을 두어 상태 리셋 방지)
 		setTimeout(() => {
 			sessionStorage.removeItem('isRefreshing');
-		}, 1000);
+		}, 2000); // 2초로 늘려서 상태 리셋 방지
 	}, delay);
 }
 
