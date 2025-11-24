@@ -1,4 +1,4 @@
-import PortfolioGrid from '@/components/PortfolioGrid';
+import PortfolioPaginatedGrid from '@/components/PortfolioPaginatedGrid';
 import { getPortfolios } from '@/lib/notion';
 import type { Metadata } from 'next';
 import type { PortfolioItem } from '@/lib/types';
@@ -22,7 +22,7 @@ export default async function PortfolioPage() {
 
 	return (
 		<div className="space-y-8">
-			<PortfolioGrid items={items} priorityCount={12} />
+			<PortfolioPaginatedGrid items={items} />
 		</div>
 	);
 }

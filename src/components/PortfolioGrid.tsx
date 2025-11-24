@@ -146,7 +146,8 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 	}, [items, actualPriorityCount, showPriorityImages]);
 
 	return (
-		<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+		<div className="mx-auto w-full max-w-[1100px] px-4 sm:px-6">
+			<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
 			{items.map((item, index) => {
 				const isPriority = index < actualPriorityCount;
 				return (
@@ -164,6 +165,7 @@ export default function PortfolioGrid({ items, priorityCount = 12 }: Props) {
 					표시할 포트폴리오가 없습니다.
 				</div>
 			)}
+			</div>
 		</div>
 	);
 }
