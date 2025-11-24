@@ -160,7 +160,7 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 			<div className="space-y-1 p-4">
 				<h3 className="line-clamp-1 text-base font-semibold text-slate-900">{item.title}</h3>
 				<p className="line-clamp-1 text-sm text-slate-600">{item.location || '지역 정보 미상'}</p>
-				<p className="text-sm text-slate-500">{item.type || '기타'} · {item.completedAt ? (() => { const [y, m] = item.completedAt.split('-'); return `${y}년 ${Number(m)}월`; })() : '연월 미상'}</p>
+				<p className="text-sm text-slate-500">{item.type || '기타'} · {item.completedAt ? (() => { try { const parts = item.completedAt.split('-'); if (parts.length >= 2 && parts[0] && parts[1]) { const [y, m] = parts; return `${y}년 ${Number(m)}월`; } } catch {} return '연월 미상'; })() : '연월 미상'}</p>
 			</div>
 		</Link>
 	);
