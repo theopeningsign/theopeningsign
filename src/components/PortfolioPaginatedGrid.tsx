@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import PortfolioGrid from '@/components/PortfolioGrid';
 import type { PortfolioItem } from '@/lib/types';
+import { clearImageErrorFlags } from '@/lib/imageReload';
 
 interface Props {
 	items: PortfolioItem[];
@@ -28,6 +29,11 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 	// URL에서 직접 읽기
 	const selectedDepartments = searchParams.get('departments')?.split(',').filter(Boolean) || [];
 	const currentPage = Number.parseInt(searchParams.get('page') || '1', 10);
+
+	// 페이지 이동 시 세션 기반 이미지 로딩 플래그 초기화
+	useEffect(() => {
+		clearImageErrorFlags();
+	}, [currentPage]);
 
 	// 화면 크기에 따라 페이지당 아이템 수 결정
 	useEffect(() => {

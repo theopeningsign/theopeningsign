@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Lightbox from '@/components/Lightbox';
 import { isNotionImageUrl } from '@/lib/notion';
-import { scheduleImageReload, clearImageReloadFlag } from '@/lib/imageReload';
+import { scheduleImageReload, clearImageReloadFlag, clearImageErrorFlags } from '@/lib/imageReload';
 
 interface Props {
     cover?: string;
@@ -25,6 +25,11 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
     const loadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const unique = (arr: (string | undefined)[]) => Array.from(new Set(arr.filter(Boolean))) as string[];
     const allImages = unique([...(covers || []), cover, ...images]);
+
+    // 페이지 진입 시 세션 플래그 초기화
+    useEffect(() => {
+        clearImageErrorFlags();
+    }, []);
 
     // 이미지 URL이 변경되면 상태 리셋
     useEffect(() => {
