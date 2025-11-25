@@ -176,6 +176,8 @@ function mapPageToPortfolioItem(page: any): PortfolioItem | null {
     const typeLegacy: string | undefined = props?.['간판종류']?.select?.name;
     const type: string | undefined = (typeMs && typeMs.length > 0) ? typeMs.join(' · ') : typeLegacy;
     const completedAt: string | undefined = props?.['시공완료']?.date?.start ?? undefined;
+    // 진료과목 (Multi-select) - 다른 필드들과 동시에 불러옴
+    const departments: string[] | undefined = props?.['진료과목']?.multi_select?.map((s: any) => s?.name).filter(Boolean);
     // 모든 가능한 이미지 속성명 체크
     const coverFiles = props?.['메인이미지']?.files
         ?? props?.['메인 이미지']?.files
@@ -208,6 +210,7 @@ function mapPageToPortfolioItem(page: any): PortfolioItem | null {
 		location,
 		type,
 		completedAt,
+		departments,
 		coverImageUrl,
 		coverImageUrls,
 		additionalImageUrls,

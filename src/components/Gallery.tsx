@@ -145,7 +145,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 					className={`object-cover transition-opacity duration-200 transition-transform group-hover:scale-[1.03] ${(imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'opacity-0' : 'opacity-100'} ${imgError && !hasLoadedRef.current ? 'hidden' : ''}`}
 					unoptimized={isNotionImageUrl(src)}
 					priority={priority}
-					loading={priority ? undefined : 'lazy'}
+					{...(priority ? {} : { loading: 'lazy' })}
 					onLoad={handleLoad}
 					onError={handleError}
 					style={{ visibility: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'hidden' : 'visible' }}
@@ -182,15 +182,9 @@ export default function Gallery({ images, covers, cover }: Props) {
 			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{images.map((src, i) => {
 					// 첫 줄만 priority: 모바일(1개), 태블릿(2개), PC(3개)
-					// 화면 크기에 따라 동적으로 계산
-					const getPriorityCount = () => {
-						if (typeof window === 'undefined') return 3; // SSR 기본값
-						const width = window.innerWidth;
-						if (width < 640) return 1; // 모바일 (sm 미만)
-						if (width < 1024) return 2; // 태블릿 (lg 미만)
-						return 3; // PC (lg 이상)
-					};
-					const isFirstRow = i < getPriorityCount();
+					// SSR과 클라이언트에서 동일한 값 사용 (hydration mismatch 방지)
+					// 기본값 3개로 설정하고, 클라이언트에서만 동적으로 조정
+					const isFirstRow = i < 3; // SSR 기본값: PC 기준 3개
 					const priority = isFirstRow;
 					
 					return (

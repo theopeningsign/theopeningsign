@@ -25,6 +25,8 @@ export interface PortfolioItem {
     type?: string;
 	// 시공완료 (Date) => 연도/날짜 문자열
 	completedAt?: string;
+	// 진료과목 (Multi-select)
+	departments?: string[];
 	// 메인 이미지 URL (Files & media)
 	coverImageUrl?: string;
 	// 메인 이미지가 여러 장일 수 있어 배열도 노출

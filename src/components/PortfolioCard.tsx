@@ -168,6 +168,12 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 		sessionStorage.setItem('portfolioCardId', item.id);
 		sessionStorage.setItem('portfolioCardTop', cardTop.toString());
 		sessionStorage.setItem('portfolioCurrentPage', currentPage.toString());
+		
+		// 현재 URL의 쿼리 파라미터 저장 (필터 상태 포함)
+		if (typeof window !== 'undefined') {
+			const currentQuery = window.location.search;
+			sessionStorage.setItem('portfolioQueryParams', currentQuery);
+		}
 	};
 
 	return (
@@ -204,7 +210,14 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 			</div>
 			<div className="space-y-1 p-4">
 				<h3 className="line-clamp-1 text-base font-semibold text-slate-900">{item.title}</h3>
-				<p className="line-clamp-1 text-sm text-slate-600">{item.location || '지역 정보 미상'}</p>
+				<div className="flex items-center gap-2 overflow-hidden">
+					<p className="flex-shrink-0 text-sm text-slate-600">{item.location || '지역 정보 미상'}</p>
+					{item.departments && item.departments.length > 0 && (
+						<p className="min-w-0 flex-1 truncate text-xs text-slate-500">
+							{item.departments.slice(0, 2).join(' · ')}
+						</p>
+					)}
+				</div>
 				<p className="text-sm text-slate-500">{item.type || '기타'} · {item.completedAt ? (() => { try { const parts = item.completedAt.split('-'); if (parts.length >= 2 && parts[0] && parts[1]) { const [y, m] = parts; return `${y}년 ${Number(m)}월`; } } catch {} return '연월 미상'; })() : '연월 미상'}</p>
 			</div>
 		</Link>
