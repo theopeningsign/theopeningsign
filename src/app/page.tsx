@@ -4,7 +4,7 @@ import Image from "next/image";
 export default function Home() {
   return (
     <>
-    <Link href="/portfolio" className="block cursor-pointer">
+    <Link href="/portfolio" className="block cursor-pointer outline-none focus:outline-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
     <section className="min-h-[70vh] grid items-center px-4 overflow-hidden">
       <div className="mx-auto grid w-full max-w-6xl gap-10 md:grid-cols-2">
         {/* 왼쪽: 로고 (모바일에서 먼저, 데스크톱 좌측) */}
