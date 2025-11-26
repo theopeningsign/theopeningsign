@@ -4,6 +4,7 @@ import Image from "next/image";
 export default function Home() {
   return (
     <>
+    <Link href="/portfolio" className="block cursor-pointer">
     <section className="min-h-[70vh] grid items-center px-4 overflow-hidden">
       <div className="mx-auto grid w-full max-w-6xl gap-10 md:grid-cols-2">
         {/* 왼쪽: 로고 (모바일에서 먼저, 데스크톱 좌측) */}
@@ -31,6 +32,7 @@ export default function Home() {
         </div>
       </div>
     </section>
+    </Link>
     {/* 하단 중앙 포트폴리오 보러가기 버튼 (모바일 겹침 방지: 음수 마진 제거) */}
     <div className="flex justify-center py-6 mt-2 md:mt-0">
       <Link
