@@ -16,3 +16,6 @@ export default function PortfolioLayout({ children }: { children: React.ReactNod
 	return <>{children}</>;
 }
 
+
+
+
