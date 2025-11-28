@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import PortfolioGrid from '@/components/PortfolioGrid';
 import type { PortfolioItem } from '@/lib/types';
-import { clearImageErrorFlags } from '@/lib/imageReload';
+import { clearImageErrorFlags, PORTFOLIO_LIST_RELOAD_FLAG } from '@/lib/imageReload';
 
 interface Props {
 	items: PortfolioItem[];
@@ -118,9 +118,19 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 
 	// 현재 페이지가 총 페이지 수를 넘으면 보정
 	useEffect(() => {
-		if (currentPage > totalPages && totalPages > 0) {
-			updateURL({ page: 1 });
-		}
+		// refresh 중이면 페이지 보정 완전히 스킵
+		const isRefreshing = typeof window !== 'undefined' && sessionStorage.getItem('isRefreshing') === 'true';
+		if (isRefreshing) return;
+		
+		// refresh가 끝난 후에도 계산이 안정화될 때까지 대기
+		const timer = setTimeout(() => {
+			if (currentPage > totalPages && totalPages > 0) {
+				// 가능한 범위 내 최대 페이지로 이동
+				updateURL({ page: totalPages });
+			}
+		}, 200); // 충분한 시간을 두어 계산이 안정화되도록
+		
+		return () => clearTimeout(timer);
 	}, [totalPages, currentPage]);
 
 	// 진료과목 토글
@@ -128,11 +138,18 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 		const newDepartments = selectedDepartments.includes(dept)
 			? selectedDepartments.filter(d => d !== dept)
 			: [...selectedDepartments, dept];
+		
+		// 필터 변경 시 재시도 플래그 초기화
+		sessionStorage.removeItem(PORTFOLIO_LIST_RELOAD_FLAG);
+		
 		updateURL({ departments: newDepartments, page: 1 });
 	};
 
 	// 초기화
 	const handleReset = () => {
+		// 필터 리셋 시 플래그도 초기화
+		sessionStorage.removeItem(PORTFOLIO_LIST_RELOAD_FLAG);
+		
 		updateURL({ departments: [], page: 1 });
 		setIsFilterOpen(false);
 	};
@@ -140,6 +157,10 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 	// 페이지 변경
 	const handlePageChange = (page: number) => {
 		if (page < 1 || page > totalPages || page === currentPage) return;
+		
+		// 페이지 변경 시 재시도 플래그 초기화 (새 페이지에서는 다시 재시도 가능)
+		sessionStorage.removeItem(PORTFOLIO_LIST_RELOAD_FLAG);
+		
 		updateURL({ page });
 		if (typeof window !== 'undefined') {
 			window.scrollTo({ top: 0, behavior: 'smooth' });
