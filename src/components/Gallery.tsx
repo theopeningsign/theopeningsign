@@ -133,7 +133,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 	return (
 		<>
 			{imgLoading && !hasLoadedRef.current && (
-				<div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100">
+				<div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-100">
                     <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-orange-400" />
                 </div>
 			)}
@@ -148,7 +148,10 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 					{...(priority ? {} : { loading: 'lazy' })}
 					onLoad={handleLoad}
 					onError={handleError}
-					style={{ visibility: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'hidden' : 'visible' }}
+					style={{ 
+						visibility: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'hidden' : 'visible',
+						display: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'none' : 'block'
+					}}
 				/>
 			)}
 		</>

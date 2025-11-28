@@ -165,7 +165,7 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
     return (
         <div className="group relative w-full aspect-[16/9] overflow-hidden rounded-xl border">
             {imgLoading && !hasLoadedRef.current && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100">
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-100">
                     <div className="flex flex-col items-center gap-3">
                         <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-orange-400" />
                         <span className="text-xs text-slate-400">이미지 로딩 중...</span>
@@ -218,7 +218,10 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                             }
                         }
                     }}
-                    style={{ visibility: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'hidden' : 'visible' }}
+                    style={{ 
+                        visibility: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'hidden' : 'visible',
+                        display: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'none' : 'block'
+                    }}
                 />
             )}
             <button
