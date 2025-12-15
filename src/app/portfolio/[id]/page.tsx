@@ -2,7 +2,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPortfolios, getPortfolioById } from '@/lib/notion';
-import { Suspense } from 'react';
 import Gallery from '@/components/Gallery';
 import type { Metadata } from 'next';
 import HeroLightbox from '@/components/HeroLightbox';
@@ -18,6 +17,12 @@ interface Props {
 export default async function PortfolioDetailPage({ params }: Props) {
     const { id } = await params;
     const idParam = id || '';
+    
+    // 빈 ID 체크
+    if (!idParam || idParam.trim() === '') {
+        return notFound();
+    }
+    
     let item;
     try {
         item = await getPortfolioById(idParam);
@@ -49,13 +54,7 @@ export default async function PortfolioDetailPage({ params }: Props) {
 
 
 			{/* 추가 이미지 갤러리 */}
-			<Suspense fallback={<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-				{Array.from({ length: 6 }).map((_, i) => (
-					<div key={i} className="h-40 animate-pulse rounded-lg bg-slate-200" />
-				))}
-            </div>}>
-                <Gallery images={item.additionalImageUrls} covers={item.coverImageUrls} cover={item.coverImageUrl} />
-			</Suspense>
+			<Gallery images={item.additionalImageUrls} covers={item.coverImageUrls} cover={item.coverImageUrl} />
 
 			{/* 설명 (간단 텍스트 백업) - 갤러리 아래로 이동 */}
 			{item.description && (
@@ -72,6 +71,15 @@ type MetadataProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: MetadataProps): Promise<Metadata> {
   const { id } = await params;
   const idParam = id || '';
+  
+  // 빈 ID 체크
+  if (!idParam || idParam.trim() === '') {
+    return { 
+      title: '포트폴리오 상세 | 더오프닝사인 THE OPENING SIGN',
+      description: '더오프닝사인 THE OPENING SIGN의 병원 간판 시공 포트폴리오',
+    };
+  }
+  
   let item;
   try {
     item = await getPortfolioById(idParam);
