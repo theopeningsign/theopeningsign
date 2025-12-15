@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useState, useRef, memo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Lightbox from '@/components/Lightbox';
 import { isNotionImageUrl } from '@/lib/notion';
 import { scheduleImageReload, clearImageReloadFlag } from '@/lib/imageReload';
@@ -14,7 +14,7 @@ interface Props {
 }
 
 // 개별 이미지 컴포넌트
-const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = false, router }: { src: string; alt: string; priority?: boolean; router: { refresh: () => void } }) {
+const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = false, router, errorKey }: { src: string; alt: string; priority?: boolean; router: { refresh: () => void }; errorKey: string }) {
 	const [imgLoading, setImgLoading] = useState(true);
 	const [imgError, setImgError] = useState(false);
 	const hasLoadedRef = useRef(false);
@@ -110,7 +110,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 		if (src) {
 			sessionStorage.setItem(`img_loaded_${src}`, 'true');
 		}
-		clearImageReloadFlag(src ? `img_error_${src}` : '');
+		clearImageReloadFlag(errorKey);
 	};
 
 	const handleError = () => {
@@ -124,7 +124,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 			// 재시도를 지연시켜서 즉시 상태 리셋 방지
 			if (src) {
 				setTimeout(() => {
-					scheduleImageReload(`img_error_${src}`, router);
+					scheduleImageReload(errorKey, router);
 				}, 1000);
 			}
 		}
@@ -156,10 +156,16 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 			)}
 		</>
 	);
-}, (prevProps, nextProps) => prevProps.src === nextProps.src && prevProps.priority === nextProps.priority && prevProps.router === nextProps.router);
+}, (prevProps, nextProps) =>
+	prevProps.src === nextProps.src &&
+	prevProps.priority === nextProps.priority &&
+	prevProps.router === nextProps.router &&
+	prevProps.errorKey === nextProps.errorKey
+);
 
 export default function Gallery({ images, covers, cover }: Props) {
 	const router = useRouter();
+	const pathname = usePathname();
 	const [open, setOpen] = useState(false);
 	const [index, setIndex] = useState(0);
 
@@ -189,6 +195,8 @@ export default function Gallery({ images, covers, cover }: Props) {
 					// 기본값 3개로 설정하고, 클라이언트에서만 동적으로 조정
 					const isFirstRow = i < 3; // SSR 기본값: PC 기준 3개
 					const priority = isFirstRow;
+					// URL이 변해도 변하지 않는 안정적인 키로 재시도 횟수를 관리
+					const errorKey = pathname ? `gallery:${pathname}:${i}` : `gallery:${i}`;
 					
 					return (
 						<button key={i} className="group relative aspect-[4/3] overflow-hidden rounded-lg border" onClick={() => handleImageClick(i)}>
@@ -197,6 +205,7 @@ export default function Gallery({ images, covers, cover }: Props) {
 								alt={`추가 이미지 ${i+1}`}
 								priority={priority}
 								router={router}
+								errorKey={errorKey}
 							/>
 						</button>
 					);

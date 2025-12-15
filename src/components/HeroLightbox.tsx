@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Lightbox from '@/components/Lightbox';
 import { isNotionImageUrl } from '@/lib/notion';
 import { scheduleImageReload, clearImageReloadFlag, clearImageErrorFlags } from '@/lib/imageReload';
@@ -17,6 +17,7 @@ interface Props {
 
 export default function HeroLightbox({ cover, covers, images, title, coverIndex = 0 }: Props) {
     const router = useRouter();
+    const pathname = usePathname();
     const [open, setOpen] = useState(false);
     const [imgLoading, setImgLoading] = useState(true); // 초기값을 true로 설정 (PortfolioCard와 동일)
     const [imgError, setImgError] = useState(false);
@@ -209,7 +210,8 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                             // hasLoadedRef는 true로 설정하지 않아서 재시도 가능하게 함
 
                             // 에러 발생 시 재시도는 지연시켜서 상태 리셋 방지
-                            const errorKey = cover ? `img_error_${cover}` : '';
+                            // 안정적인 키(페이지 경로 + 이미지 슬롯)로 재시도 횟수를 관리해 무한 루프를 차단합니다.
+                            const errorKey = pathname ? `hero:${pathname}:cover:${coverIndex}` : `hero:cover:${coverIndex}`;
                             if (errorKey) {
                                 // 재시도를 1초 후에 수행하여 즉시 상태 리셋 방지
                                 setTimeout(() => {

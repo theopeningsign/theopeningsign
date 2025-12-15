@@ -3,7 +3,8 @@
 // 상수 export
 export const PORTFOLIO_LIST_ERROR_KEY = 'portfolio_list_images';
 export const PORTFOLIO_LIST_RELOAD_FLAG = 'portfolio_list_reload_scheduled';
-export const MAX_REFRESH_ATTEMPTS = 2;
+// 재시도 한도를 3회로 상향해 단기간 반복 루프를 막습니다.
+export const MAX_REFRESH_ATTEMPTS = 3;
 
 // router를 파라미터로 받아서 refresh하는 방식으로 변경
 export function scheduleImageReload(errorKey: string, router: { refresh: () => void }, delay = 3000) {
