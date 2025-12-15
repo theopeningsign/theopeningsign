@@ -11,14 +11,13 @@ import ScrollToTop from '@/components/ScrollToTop';
 
 export const revalidate = 60; // 1분 캐시 (정상 로드 시 빠름, 이미지 실패 시 자동 새로고침)
 
-type MaybePromise<T> = T | Promise<T>;
 interface Props {
-    params: MaybePromise<{ id: string }>;
+    params: Promise<{ id: string }>;
 }
 
 export default async function PortfolioDetailPage({ params }: Props) {
-    const resolved = (typeof (params as any)?.then === 'function') ? await (params as any) : params as { id: string };
-    const idParam = resolved?.id || '';
+    const { id } = await params;
+    const idParam = id || '';
     let item;
     try {
         item = await getPortfolioById(idParam);
@@ -68,11 +67,11 @@ export default async function PortfolioDetailPage({ params }: Props) {
 	);
 }
 
-type MetadataProps = { params: MaybePromise<{ id: string }> };
+type MetadataProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: MetadataProps): Promise<Metadata> {
-  const resolved = (typeof (params as any)?.then === 'function') ? await (params as any) : params as { id: string };
-  const idParam = resolved?.id || '';
+  const { id } = await params;
+  const idParam = id || '';
   let item;
   try {
     item = await getPortfolioById(idParam);
