@@ -70,7 +70,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 		return () => document.removeEventListener('keydown', onKey);
 	}, [onClose, total, scale]);
 
-	// 마우스 휠 이벤트 (확대/축소 또는 사진 넘기기)
+	// 마우스 휠 이벤트 (Ctrl/Cmd + 휠로 확대/축소만)
 	useEffect(() => {
 		function onWheel(e: WheelEvent) {
 			// Ctrl 키와 함께 휠을 굴리면 확대/축소 (모든 상태에서 동작)
@@ -80,22 +80,10 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 				setScale((prev) => Math.max(1, Math.min(3, prev + delta)));
 				return;
 			}
-
-			// 기본 상태(scale === 1)일 때만 일반 휠로 사진 넘기기
-			if (scale === 1) {
-				e.preventDefault();
-				if (e.deltaY > 0) {
-					// 아래로 스크롤 = 다음 사진
-					goNext();
-				} else {
-					// 위로 스크롤 = 이전 사진
-					goPrev();
-				}
-			}
 		}
 		window.addEventListener('wheel', onWheel, { passive: false });
 		return () => window.removeEventListener('wheel', onWheel);
-	}, [scale, total]);
+	}, []);
 
 	// 두 손가락 간 거리 계산 함수
 	const getTouchDistance = (touch1: React.Touch, touch2: React.Touch) => {

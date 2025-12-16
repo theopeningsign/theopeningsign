@@ -54,7 +54,7 @@ export default async function PortfolioDetailPage({ params }: Props) {
 
 
 			{/* 추가 이미지 갤러리 */}
-			<Gallery images={item.additionalImageUrls} covers={item.coverImageUrls} cover={item.coverImageUrl} />
+                <Gallery images={item.additionalImageUrls} covers={item.coverImageUrls} cover={item.coverImageUrl} />
 
 			{/* 설명 (간단 텍스트 백업) - 갤러리 아래로 이동 */}
 			{item.description && (

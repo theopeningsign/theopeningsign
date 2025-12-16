@@ -21,6 +21,7 @@ html, body {
   color: var(--foreground);
   font-family: var(--font-noto-sans-kr), Arial, Helvetica, sans-serif;
   scroll-behavior: smooth;
+  overscroll-behavior-y: none; /* iOS Chrome에서 스크롤 끝 바운스 방지 */
 }
 
 /* 간단한 페이드 인 */
