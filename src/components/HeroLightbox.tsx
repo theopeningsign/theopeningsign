@@ -24,6 +24,8 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
     const hasLoadedRef = useRef(false); // 이미지가 한 번 로드되었는지 추적
     const prevCoverRef = useRef<string | undefined>(cover);
     const loadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isMountedRef = useRef(true);
+    const retryTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
     const unique = (arr: (string | undefined)[]) => Array.from(new Set(arr.filter(Boolean))) as string[];
     const allImages = unique([...(covers || []), cover, ...images]);
 
@@ -77,38 +79,48 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
         if (cover && typeof window !== 'undefined') {
             // sessionStorage는 신뢰하지 않고, 항상 실제 이미지 로드를 확인
             // 브라우저 캐시에 이미지가 있는지 먼저 확인
-            const img = document.createElement('img');
-            let cacheChecked = false;
-            
-            img.onload = () => {
-                if (!hasLoadedRef.current && !cacheChecked) {
-                    cacheChecked = true;
-                    // 이미지가 캐시에 있으면 즉시 로드 완료 처리
-                    setImgLoading(false);
-                    setImgError(false);
-                    hasLoadedRef.current = true;
-                    // sessionStorage에 로드 상태 저장 (refresh 후 복원용, 단기간만 유효)
-                    const loadedKey = `img_loaded_${cover}`;
-                    sessionStorage.setItem(loadedKey, 'true');
-                    if (loadTimeoutRef.current) {
-                        clearTimeout(loadTimeoutRef.current);
+            try {
+                const img = document.createElement('img');
+                let cacheChecked = false;
+                
+                img.onload = () => {
+                    if (isMountedRef.current && !hasLoadedRef.current && !cacheChecked) {
+                        cacheChecked = true;
+                        // 이미지가 캐시에 있으면 즉시 로드 완료 처리
+                        try {
+                            setImgLoading(false);
+                            setImgError(false);
+                            hasLoadedRef.current = true;
+                            // sessionStorage에 로드 상태 저장 (refresh 후 복원용, 단기간만 유효)
+                            const loadedKey = `img_loaded_${cover}`;
+                            sessionStorage.setItem(loadedKey, 'true');
+                            if (loadTimeoutRef.current) {
+                                clearTimeout(loadTimeoutRef.current);
+                            }
+                        } catch (e) {
+                            // 상태 업데이트 중 에러 발생 시 무시 (컴포넌트 언마운트 등)
+                            console.error('[HeroLightbox] 이미지 로드 상태 업데이트 실패:', e);
+                        }
                     }
-                }
-            };
-            
-            img.onerror = () => {
-                cacheChecked = true;
-                // 캐시에 없으면 로딩 상태 유지 (실제 Image 컴포넌트가 로드 시도)
-            };
-            
-            img.src = cover;
-            
-            // 타임아웃 제거: 에러가 나도 스피너를 계속 보여주기 위해 강제 표시하지 않음
+                };
+                
+                img.onerror = () => {
+                    cacheChecked = true;
+                    // 캐시에 없으면 로딩 상태 유지 (실제 Image 컴포넌트가 로드 시도)
+                };
+                
+                img.src = cover;
+                
+                // 타임아웃 제거: 에러가 나도 스피너를 계속 보여주기 위해 강제 표시하지 않음
 
-            return () => {
-                img.onload = null;
-                img.onerror = null;
-            };
+                return () => {
+                    img.onload = null;
+                    img.onerror = null;
+                };
+            } catch (e) {
+                // 이미지 생성 중 에러 발생 시 무시
+                console.error('[HeroLightbox] 이미지 캐시 확인 실패:', e);
+            }
         }
     }, [cover, imgError]);
 
@@ -116,41 +128,87 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
     useEffect(() => {
         if (typeof window === 'undefined' || !cover) return;
         
+        const timeoutIds = new Set<NodeJS.Timeout>();
+        const imgObjects = new Set<HTMLImageElement>();
+        
         const handleVisibilityChange = () => {
             // 탭이 포그라운드로 돌아왔고, 이미지가 아직 로드되지 않았을 때만 재확인
-            if (document.visibilityState === 'visible' && !hasLoadedRef.current && imgLoading) {
+            if (document.visibilityState === 'visible' && !hasLoadedRef.current && imgLoading && isMountedRef.current) {
                 // 약간의 지연을 두어 브라우저가 네트워크를 다시 활성화할 시간을 줌
-                setTimeout(() => {
-                    if (!hasLoadedRef.current && cover) {
-                        const img = document.createElement('img');
-                        img.onload = () => {
-                            if (!hasLoadedRef.current) {
-                                setImgLoading(false);
-                                setImgError(false);
-                                hasLoadedRef.current = true;
-                                if (cover) {
-                                    sessionStorage.setItem(`img_loaded_${cover}`, 'true');
+                const timeoutId = setTimeout(() => {
+                    if (!hasLoadedRef.current && cover && isMountedRef.current) {
+                        try {
+                            const img = document.createElement('img');
+                            imgObjects.add(img);
+                            
+                            img.onload = () => {
+                                if (!hasLoadedRef.current && isMountedRef.current) {
+                                    try {
+                                        setImgLoading(false);
+                                        setImgError(false);
+                                        hasLoadedRef.current = true;
+                                        if (cover) {
+                                            sessionStorage.setItem(`img_loaded_${cover}`, 'true');
+                                        }
+                                        if (loadTimeoutRef.current) {
+                                            clearTimeout(loadTimeoutRef.current);
+                                        }
+                                    } catch (e) {
+                                        console.error('[HeroLightbox] 이미지 재확인 상태 업데이트 실패:', e);
+                                    }
                                 }
-                                if (loadTimeoutRef.current) {
-                                    clearTimeout(loadTimeoutRef.current);
-                                }
-                            }
-                        };
-                        img.onerror = () => {
-                            // 재확인 실패 시 아무것도 하지 않음 (무한 루프 방지)
-                            // 실제 에러 처리는 기존 onError에서만 수행
-                        };
-                        img.src = cover;
+                                // cleanup
+                                img.onload = null;
+                                img.onerror = null;
+                                imgObjects.delete(img);
+                            };
+                            img.onerror = () => {
+                                // 재확인 실패 시 아무것도 하지 않음 (무한 루프 방지)
+                                // 실제 에러 처리는 기존 onError에서만 수행
+                                // cleanup
+                                img.onload = null;
+                                img.onerror = null;
+                                imgObjects.delete(img);
+                            };
+                            img.src = cover;
+                        } catch (e) {
+                            console.error('[HeroLightbox] 이미지 재확인 실패:', e);
+                        }
                     }
+                    timeoutIds.delete(timeoutId);
                 }, 300);
+                timeoutIds.add(timeoutId);
             }
         };
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => {
+            // 모든 timeout 정리
+            timeoutIds.forEach(timeoutId => clearTimeout(timeoutId));
+            timeoutIds.clear();
+            // 모든 img 객체 정리
+            imgObjects.forEach(img => {
+                img.onload = null;
+                img.onerror = null;
+            });
+            imgObjects.clear();
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [cover, imgLoading]);
+
+    // 컴포넌트 언마운트 시 최종 cleanup
+    useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+            if (retryTimeoutRef.current) {
+                clearTimeout(retryTimeoutRef.current);
+            }
+            if (loadTimeoutRef.current) {
+                clearTimeout(loadTimeoutRef.current);
+            }
+        };
+    }, []);
 
     // 클릭한 이미지가 전체 리스트에서 몇 번째인지 계산
     // covers 배열에서 cover의 인덱스를 찾거나, 전달받은 coverIndex 사용
@@ -182,6 +240,9 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                     priority
                     unoptimized={isNotionImageUrl(cover)}
                     onLoad={() => {
+                        // 컴포넌트가 언마운트되었으면 상태 업데이트하지 않음
+                        if (!isMountedRef.current) return;
+                        
                         if (!hasLoadedRef.current) {
                             if (loadTimeoutRef.current) {
                                 clearTimeout(loadTimeoutRef.current);
@@ -200,6 +261,9 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                         }
                     }}
                     onError={() => {
+                        // 컴포넌트가 언마운트되었으면 상태 업데이트하지 않음
+                        if (!isMountedRef.current) return;
+                        
                         if (!hasLoadedRef.current) {
                             if (loadTimeoutRef.current) {
                                 clearTimeout(loadTimeoutRef.current);
@@ -213,9 +277,15 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                             // 안정적인 키(페이지 경로 + 이미지 슬롯)로 재시도 횟수를 관리해 무한 루프를 차단합니다.
                             const errorKey = pathname ? `hero:${pathname}:cover:${coverIndex}` : `hero:cover:${coverIndex}`;
                             if (errorKey) {
+                                // 기존 timeout이 있으면 clear
+                                if (retryTimeoutRef.current) {
+                                    clearTimeout(retryTimeoutRef.current);
+                                }
                                 // 재시도를 1초 후에 수행하여 즉시 상태 리셋 방지
-                                setTimeout(() => {
-                                    scheduleImageReload(errorKey, router);
+                                retryTimeoutRef.current = setTimeout(() => {
+                                    if (isMountedRef.current) {
+                                        scheduleImageReload(errorKey, router);
+                                    }
                                 }, 1000);
                             }
                         }

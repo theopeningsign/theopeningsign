@@ -19,6 +19,8 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 	const [imgError, setImgError] = useState(false);
 	const hasLoadedRef = useRef(false);
 	const prevSrcRef = useRef<string | undefined>(src);
+	const isMountedRef = useRef(true);
+	const retryTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
 	useEffect(() => {
 		if (prevSrcRef.current !== src) {
@@ -39,28 +41,39 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 		if (src && typeof window !== 'undefined') {
 			// sessionStorage는 신뢰하지 않고, 항상 실제 이미지 로드를 확인
 			// 브라우저 캐시에 이미지가 있는지 확인
-			const img = document.createElement('img');
-			img.onload = () => {
-				// 이미지가 캐시에 있으면 즉시 로딩 완료 상태로 설정
-				if (!hasLoadedRef.current) {
-					setImgLoading(false);
-					setImgError(false);
-					hasLoadedRef.current = true;
-					// sessionStorage에 로드 상태 저장 (refresh 후 복원용, 단기간만 유효)
-					const loadedKey = `img_loaded_${src}`;
-					sessionStorage.setItem(loadedKey, 'true');
-				}
-			};
-			img.onerror = () => {
-				// 캐시에 없으면 로딩 상태 유지 (실제 Image 컴포넌트가 로드 시도)
-			};
-			img.src = src;
-			
-			// 타임아웃 제거: 에러가 나도 스피너를 계속 보여주기 위해 강제 표시하지 않음
+			try {
+				const img = document.createElement('img');
+				img.onload = () => {
+					// 이미지가 캐시에 있으면 즉시 로딩 완료 상태로 설정
+					if (isMountedRef.current && !hasLoadedRef.current) {
+						try {
+							setImgLoading(false);
+							setImgError(false);
+							hasLoadedRef.current = true;
+							// sessionStorage에 로드 상태 저장 (refresh 후 복원용, 단기간만 유효)
+							const loadedKey = `img_loaded_${src}`;
+							sessionStorage.setItem(loadedKey, 'true');
+						} catch (e) {
+							// 상태 업데이트 중 에러 발생 시 무시 (컴포넌트 언마운트 등)
+							console.error('[Gallery] 이미지 로드 상태 업데이트 실패:', e);
+						}
+					}
+				};
+				img.onerror = () => {
+					// 캐시에 없으면 로딩 상태 유지 (실제 Image 컴포넌트가 로드 시도)
+				};
+				img.src = src;
+				
+				// 타임아웃 제거: 에러가 나도 스피너를 계속 보여주기 위해 강제 표시하지 않음
 
-			return () => {
-				img.onload = null;
-			};
+				return () => {
+					img.onload = null;
+					img.onerror = null;
+				};
+			} catch (e) {
+				// 이미지 생성 중 에러 발생 시 무시
+				console.error('[Gallery] 이미지 캐시 확인 실패:', e);
+			}
 		}
 	}, [src, imgError]);
 
@@ -68,40 +81,86 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 	useEffect(() => {
 		if (typeof window === 'undefined' || !src) return;
 		
+		const timeoutIds = new Set<NodeJS.Timeout>();
+		const imgObjects = new Set<HTMLImageElement>();
+		
 		const handleVisibilityChange = () => {
 			// 탭이 포그라운드로 돌아왔고, 이미지가 아직 로드되지 않았을 때만 재확인
-			if (document.visibilityState === 'visible' && !hasLoadedRef.current && imgLoading) {
+			if (document.visibilityState === 'visible' && !hasLoadedRef.current && imgLoading && isMountedRef.current) {
 				// 약간의 지연을 두어 브라우저가 네트워크를 다시 활성화할 시간을 줌
-				setTimeout(() => {
-					if (!hasLoadedRef.current && src) {
-						const img = document.createElement('img');
-						img.onload = () => {
-							if (!hasLoadedRef.current) {
-								setImgLoading(false);
-								setImgError(false);
-								hasLoadedRef.current = true;
-								if (src) {
-									sessionStorage.setItem(`img_loaded_${src}`, 'true');
+				const timeoutId = setTimeout(() => {
+					if (!hasLoadedRef.current && src && isMountedRef.current) {
+						try {
+							const img = document.createElement('img');
+							imgObjects.add(img);
+							
+							img.onload = () => {
+								if (!hasLoadedRef.current && isMountedRef.current) {
+									try {
+										setImgLoading(false);
+										setImgError(false);
+										hasLoadedRef.current = true;
+										if (src) {
+											sessionStorage.setItem(`img_loaded_${src}`, 'true');
+										}
+									} catch (e) {
+										console.error('[Gallery] 이미지 재확인 상태 업데이트 실패:', e);
+									}
 								}
-							}
-						};
-						img.onerror = () => {
-							// 재확인 실패 시 아무것도 하지 않음 (무한 루프 방지)
-							// 실제 에러 처리는 기존 onError에서만 수행
-						};
-						img.src = src;
+								// cleanup
+								img.onload = null;
+								img.onerror = null;
+								imgObjects.delete(img);
+							};
+							img.onerror = () => {
+								// 재확인 실패 시 아무것도 하지 않음 (무한 루프 방지)
+								// 실제 에러 처리는 기존 onError에서만 수행
+								// cleanup
+								img.onload = null;
+								img.onerror = null;
+								imgObjects.delete(img);
+							};
+							img.src = src;
+						} catch (e) {
+							console.error('[Gallery] 이미지 재확인 실패:', e);
+						}
 					}
+					timeoutIds.delete(timeoutId);
 				}, 300);
+				timeoutIds.add(timeoutId);
 			}
 		};
 
 		document.addEventListener('visibilitychange', handleVisibilityChange);
 		return () => {
+			// 모든 timeout 정리
+			timeoutIds.forEach(timeoutId => clearTimeout(timeoutId));
+			timeoutIds.clear();
+			// 모든 img 객체 정리
+			imgObjects.forEach(img => {
+				img.onload = null;
+				img.onerror = null;
+			});
+			imgObjects.clear();
 			document.removeEventListener('visibilitychange', handleVisibilityChange);
 		};
 	}, [src, imgLoading]);
 
+	// 컴포넌트 언마운트 시 최종 cleanup
+	useEffect(() => {
+		isMountedRef.current = true;
+		return () => {
+			isMountedRef.current = false;
+			if (retryTimeoutRef.current) {
+				clearTimeout(retryTimeoutRef.current);
+			}
+		};
+	}, []);
+
 	const handleLoad = () => {
+		// 컴포넌트가 언마운트되었으면 상태 업데이트하지 않음
+		if (!isMountedRef.current) return;
+		
 		// 이미지가 로드되면 영구적으로 로딩 완료 상태 유지
 		setImgLoading(false);
 		setImgError(false);
@@ -114,6 +173,9 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 	};
 
 	const handleError = () => {
+		// 컴포넌트가 언마운트되었으면 상태 업데이트하지 않음
+		if (!isMountedRef.current) return;
+		
 		if (!hasLoadedRef.current) {
 			// 에러가 발생해도 스피너를 계속 보여줌 (사용자는 로딩 중인 것으로 인식)
 			setImgError(true);
@@ -123,8 +185,14 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 			// 서버 컴포넌트만 갱신 (부드러운 갱신, 사용자 경험 방해 최소화)
 			// 재시도를 지연시켜서 즉시 상태 리셋 방지
 			if (src) {
-				setTimeout(() => {
-					scheduleImageReload(errorKey, router);
+				// 기존 timeout이 있으면 clear
+				if (retryTimeoutRef.current) {
+					clearTimeout(retryTimeoutRef.current);
+				}
+				retryTimeoutRef.current = setTimeout(() => {
+					if (isMountedRef.current) {
+						scheduleImageReload(errorKey, router);
+					}
 				}, 1000);
 			}
 		}
