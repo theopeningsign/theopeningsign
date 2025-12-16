@@ -1,7 +1,7 @@
 // 이미지 라이트박스 컴포넌트
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import Image from 'next/image';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { isNotionImageUrl } from '@/lib/notion';
@@ -18,6 +18,8 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 	const [scale, setScale] = useState(1); // 마우스 휠 확대/축소용
 	const [isDragging, setIsDragging] = useState(false);
 	const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+	const dragStartRef = useRef(dragStart);
+	const scaleRef = useRef(scale);
 	const [translate, setTranslate] = useState({ x: 0, y: 0 });
 	const [hasDragged, setHasDragged] = useState(false); // 실제로 드래그가 발생했는지 추적
 	// 터치 이벤트용
@@ -146,7 +148,8 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 			const newX = touch.clientX - dragStart.x;
 			const newY = touch.clientY - dragStart.y;
 			
-			const maxTranslate = 200;
+			// 스케일에 비례해서 이동 범위 증가 (확대가 클수록 더 많이 이동 가능)
+			const maxTranslate = 200 * scale;
 			const clampedX = Math.max(-maxTranslate, Math.min(maxTranslate, newX));
 			const clampedY = Math.max(-maxTranslate, Math.min(maxTranslate, newY));
 			
@@ -240,7 +243,8 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 			}
 			
 			// 경계 처리: 이미지가 화면 밖으로 너무 벗어나지 않도록 제한
-			const maxTranslate = 200; // 최대 이동 거리 제한
+			// 스케일에 비례해서 이동 범위 증가 (확대가 클수록 더 많이 이동 가능)
+			const maxTranslate = 200 * scale;
 			const clampedX = Math.max(-maxTranslate, Math.min(maxTranslate, newX));
 			const clampedY = Math.max(-maxTranslate, Math.min(maxTranslate, newY));
 			
@@ -256,12 +260,21 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 		}, 100);
 	};
 
+	// dragStart와 scale을 ref에 동기화
+	useEffect(() => {
+		dragStartRef.current = dragStart;
+	}, [dragStart]);
+	
+	useEffect(() => {
+		scaleRef.current = scale;
+	}, [scale]);
+
 	// 전역 마우스 이벤트 (드래그 중 화면 밖으로 나가도 동작하도록)
 	useEffect(() => {
 		if (isDragging) {
 			const handleGlobalMouseMove = (e: MouseEvent) => {
-				const newX = e.clientX - dragStart.x;
-				const newY = e.clientY - dragStart.y;
+				const newX = e.clientX - dragStartRef.current.x;
+				const newY = e.clientY - dragStartRef.current.y;
 				
 				// 실제로 이동이 발생했는지 확인 (이전 translate 값과 비교)
 				setTranslate((prev) => {
@@ -272,7 +285,8 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 						setHasDragged(true);
 					}
 					
-					const maxTranslate = 200;
+					// 스케일에 비례해서 이동 범위 증가 (확대가 클수록 더 많이 이동 가능)
+					const maxTranslate = 200 * scaleRef.current;
 					const clampedX = Math.max(-maxTranslate, Math.min(maxTranslate, newX));
 					const clampedY = Math.max(-maxTranslate, Math.min(maxTranslate, newY));
 					
@@ -295,15 +309,25 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 				window.removeEventListener('mouseup', handleGlobalMouseUp);
 			};
 		}
-	}, [isDragging, dragStart]);
+	}, [isDragging]);
 
 	function goPrev() { setIndex((p) => (p - 1 + total) % total); }
 	function goNext() { setIndex((p) => (p + 1) % total); }
 	
 	const handleZoomClick = (targetScale: number) => {
-		setScale(targetScale);
-		// scale 변경 시 translate도 초기화하여 위치 튀는 현상 방지
-		setTranslate({ x: 0, y: 0 });
+		// 현재 스케일과 translate를 기준으로 새로운 translate 계산
+		// 줌 레벨 변경 시 현재 보고 있는 위치를 유지하도록 비율 조정
+		setScale((prevScale) => {
+			setTranslate((prevTranslate) => {
+				// 스케일 비율에 맞춰 translate 조정
+				const scaleRatio = targetScale / prevScale;
+				return {
+					x: prevTranslate.x * scaleRatio,
+					y: prevTranslate.y * scaleRatio
+				};
+			});
+			return targetScale;
+		});
 		setZoomed(true);
 		// 핀치 줌 플래그도 초기화
 		setWasPinching(false);
