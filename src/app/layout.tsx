@@ -29,6 +29,7 @@ export const metadata: Metadata = {
     url: process.env.SITE_URL || "https://theopeningsign.vercel.app",
     siteName: "더오프닝사인 THE OPENING SIGN",
     type: "website",
+    images: [{ url: "/logo_nail.png", width: 1200, height: 1200 }],
   },
   metadataBase: new URL(process.env.SITE_URL || "https://theopeningsign.vercel.app"),
 };
