@@ -197,14 +197,14 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 			style={{ borderColor: '#FAD2BE' }}
 		>
 			<div className="relative aspect-[4/3] w-full">
-				<div className={`absolute inset-0 z-10 flex items-center justify-center bg-slate-100 transition-opacity duration-300 ${(imgLoading && !hasLoadedRef.current) || (priority && !showPriorityImages) ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+				<div className={`absolute inset-0 z-10 flex items-center justify-center bg-slate-100 transition-opacity duration-100 ${(imgLoading && !hasLoadedRef.current) || (priority && !showPriorityImages) ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
 					<div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-orange-400" />
 				</div>
 				<Image
 					src={item.coverImageUrl || '/placeholder.svg'}
 					alt={item.title}
 					fill
-					className={`object-cover transition-opacity duration-300 ${imgLoading || (priority && !showPriorityImages) ? 'opacity-0' : 'opacity-100'}`}
+					className={`object-cover transition-opacity duration-100 ${imgLoading || (priority && !showPriorityImages) ? 'opacity-0' : 'opacity-100'}`}
 					placeholder="blur"
 					blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMTAwJScgaGVpZ2h0PScxMDAlJyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnLz4="
 					onError={handleImageError}
