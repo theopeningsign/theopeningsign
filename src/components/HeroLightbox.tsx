@@ -232,14 +232,15 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                 </div>
             )}
             {cover && (
-                <Image
-                    src={cover}
-                    alt={title}
-                    fill
-                    className={`object-cover transition-opacity duration-200 group-hover:scale-[1.02] ${(imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'opacity-0' : 'opacity-100'} ${imgError && !hasLoadedRef.current ? 'hidden' : ''}`}
-                    priority
-                    unoptimized={isNotionImageUrl(cover)}
-                    onLoad={() => {
+                <div className="absolute inset-0 overflow-hidden">
+                    <Image
+                        src={cover}
+                        alt={title}
+                        fill
+                        className={`object-cover transition-opacity duration-200 group-hover:scale-[1.02] ${(imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'opacity-0' : 'opacity-100'} ${imgError && !hasLoadedRef.current ? 'hidden' : ''}`}
+                        priority
+                        unoptimized={isNotionImageUrl(cover)}
+                        onLoad={() => {
                         // 컴포넌트가 언마운트되었으면 상태 업데이트하지 않음
                         if (!isMountedRef.current) return;
                         
@@ -281,12 +282,12 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                                 if (retryTimeoutRef.current) {
                                     clearTimeout(retryTimeoutRef.current);
                                 }
-                                // 재시도를 1초 후에 수행하여 즉시 상태 리셋 방지
+                                // 재시도를 0.5초 후에 수행하여 즉시 상태 리셋 방지
                                 retryTimeoutRef.current = setTimeout(() => {
                                     if (isMountedRef.current) {
                                         scheduleImageReload(errorKey, router);
                                     }
-                                }, 1000);
+                                }, 500);
                             }
                         }
                     }}
@@ -294,7 +295,8 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                         visibility: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'hidden' : 'visible',
                         display: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'none' : 'block'
                     }}
-                />
+                    />
+                </div>
             )}
             <button
                 type="button"

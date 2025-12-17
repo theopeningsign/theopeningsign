@@ -193,7 +193,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 					if (isMountedRef.current) {
 						scheduleImageReload(errorKey, router);
 					}
-				}, 1000);
+				}, 500);
 			}
 		}
 	};
@@ -206,21 +206,23 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
                 </div>
 			)}
 			{src && (
-				<Image 
-					src={src} 
-					alt={alt} 
-					fill 
-					className={`object-cover transition-opacity duration-200 transition-transform group-hover:scale-[1.03] ${(imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'opacity-0' : 'opacity-100'} ${imgError && !hasLoadedRef.current ? 'hidden' : ''}`}
-					unoptimized={isNotionImageUrl(src)}
-					priority={priority}
-					{...(priority ? {} : { loading: 'lazy' })}
-					onLoad={handleLoad}
-					onError={handleError}
-					style={{ 
-						visibility: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'hidden' : 'visible',
-						display: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'none' : 'block'
-					}}
-				/>
+				<div className="absolute inset-0 overflow-hidden">
+					<Image 
+						src={src} 
+						alt={alt} 
+						fill 
+						className={`object-cover transition-opacity duration-200 transition-transform group-hover:scale-[1.03] ${(imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'opacity-0' : 'opacity-100'} ${imgError && !hasLoadedRef.current ? 'hidden' : ''}`}
+						unoptimized={isNotionImageUrl(src)}
+						priority={priority}
+						{...(priority ? {} : { loading: 'lazy' })}
+						onLoad={handleLoad}
+						onError={handleError}
+						style={{ 
+							visibility: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'hidden' : 'visible',
+							display: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'none' : 'block'
+						}}
+					/>
+				</div>
 			)}
 		</>
 	);

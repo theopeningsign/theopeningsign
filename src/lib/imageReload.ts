@@ -7,7 +7,7 @@ export const PORTFOLIO_LIST_RELOAD_FLAG = 'portfolio_list_reload_scheduled';
 export const MAX_REFRESH_ATTEMPTS = 3;
 
 // router를 파라미터로 받아서 refresh하는 방식으로 변경
-export function scheduleImageReload(errorKey: string, router: { refresh: () => void }, delay = 3000) {
+export function scheduleImageReload(errorKey: string, router: { refresh: () => void }, delay = 1000) {
 	if (typeof window === 'undefined' || !errorKey) return;
 
 	const attempts = Number.parseInt(sessionStorage.getItem(errorKey) || '0', 10);
