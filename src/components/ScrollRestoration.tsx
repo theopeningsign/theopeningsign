@@ -85,33 +85,90 @@ export default function ScrollRestoration() {
 			if (shouldRestore && (savedCardId || savedScrollPosition) && !hasRestored.current) {
 				hasRestored.current = true;
 
-				// 여러 번 시도
+				// 사용자 스크롤 감지 플래그 및 타이머 관리
+				let userScrolled = false;
+				const restoreTimeouts = new Set<NodeJS.Timeout>();
+				const restoreRafIds = new Set<number>();
+
+				// 사용자 스크롤 감지 함수
+				const detectUserScroll = () => {
+					userScrolled = true;
+					// 모든 복원 타이머 취소
+					restoreTimeouts.forEach(timeout => clearTimeout(timeout));
+					restoreTimeouts.clear();
+					restoreRafIds.forEach(rafId => cancelAnimationFrame(rafId));
+					restoreRafIds.clear();
+					// 리스너 제거
+					window.removeEventListener('wheel', detectUserScroll);
+					window.removeEventListener('touchmove', detectUserScroll);
+					window.removeEventListener('keydown', detectUserScrollKey);
+				};
+
+				// 키보드 스크롤 감지 (PageUp, PageDown, ArrowUp, ArrowDown, Space 등)
+				const detectUserScrollKey = (e: KeyboardEvent) => {
+					if (['PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', 'Home', 'End', ' '].includes(e.key)) {
+						detectUserScroll();
+					}
+				};
+
+				// 사용자 스크롤 감지 리스너 등록
+				window.addEventListener('wheel', detectUserScroll, { passive: true });
+				window.addEventListener('touchmove', detectUserScroll, { passive: true });
+				window.addEventListener('keydown', detectUserScrollKey);
+
+				// 여러 번 시도 (사용자 스크롤 감지 시 취소)
 				const attemptRestore = () => {
+					if (userScrolled) return; // 사용자가 스크롤했으면 복원 취소
+					
 					tryRestore();
-					requestAnimationFrame(() => {
+					
+					const rafId1 = requestAnimationFrame(() => {
+						if (userScrolled) return;
 						tryRestore();
-						setTimeout(() => {
+						
+						const timeout1 = setTimeout(() => {
+							if (userScrolled) return;
 							tryRestore();
-							setTimeout(() => {
+							
+							const timeout2 = setTimeout(() => {
+								if (userScrolled) return;
 								tryRestore();
-								// 최종 복원 후 세션 스토리지 정리
-								setTimeout(() => {
+								
+								// 최종 복원 후 세션 스토리지 정리 및 리스너 제거
+								const timeout3 = setTimeout(() => {
 									sessionStorage.removeItem('portfolioCardId');
 									sessionStorage.removeItem('portfolioCardTop');
 									sessionStorage.removeItem('portfolioScrollPosition');
 									sessionStorage.removeItem('shouldRestoreScroll'); // 플래그도 제거
+									// 리스너 제거
+									window.removeEventListener('wheel', detectUserScroll);
+									window.removeEventListener('touchmove', detectUserScroll);
+									window.removeEventListener('keydown', detectUserScrollKey);
 								}, 100);
+								restoreTimeouts.add(timeout3);
 							}, 500);
+							restoreTimeouts.add(timeout2);
 						}, 200);
+						restoreTimeouts.add(timeout1);
 					});
+					restoreRafIds.add(rafId1);
 				};
 
-				// DOM이 준비된 후 시도
+				// DOM이 준비된 후 약간의 지연을 두고 시도 (사용자가 스크롤할 시간 주기)
+				const startRestore = () => {
+					const timeout = setTimeout(() => {
+						if (!userScrolled) {
+							attemptRestore();
+						}
+					}, 100);
+					restoreTimeouts.add(timeout);
+				};
+
 				if (document.readyState === 'complete') {
-					setTimeout(attemptRestore, 0);
+					startRestore();
 				} else {
-					window.addEventListener('load', attemptRestore, { once: true });
-					setTimeout(attemptRestore, 0);
+					window.addEventListener('load', startRestore, { once: true });
+					startRestore();
 				}
 			}
 
@@ -126,11 +183,52 @@ export default function ScrollRestoration() {
 						const savedScrollPosition = sessionStorage.getItem('portfolioScrollPosition');
 						
 						if (savedCardId || savedScrollPosition) {
-							setTimeout(() => {
-								tryRestore();
-								setTimeout(() => tryRestore(), 100);
-								setTimeout(() => tryRestore(), 300);
+							// 사용자 스크롤 감지 플래그 및 타이머 관리
+							let userScrolled = false;
+							const restoreTimeouts = new Set<NodeJS.Timeout>();
+
+							// 사용자 스크롤 감지 함수
+							const detectUserScroll = () => {
+								userScrolled = true;
+								// 모든 복원 타이머 취소
+								restoreTimeouts.forEach(timeout => clearTimeout(timeout));
+								restoreTimeouts.clear();
+								// 리스너 제거
+								window.removeEventListener('wheel', detectUserScroll);
+								window.removeEventListener('touchmove', detectUserScroll);
+								window.removeEventListener('keydown', detectUserScrollKey);
+							};
+
+							// 키보드 스크롤 감지
+							const detectUserScrollKey = (e: KeyboardEvent) => {
+								if (['PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', 'Home', 'End', ' '].includes(e.key)) {
+									detectUserScroll();
+								}
+							};
+
+							// 사용자 스크롤 감지 리스너 등록
+							window.addEventListener('wheel', detectUserScroll, { passive: true });
+							window.addEventListener('touchmove', detectUserScroll, { passive: true });
+							window.addEventListener('keydown', detectUserScrollKey);
+
+							const timeout1 = setTimeout(() => {
+								if (!userScrolled) {
+									tryRestore();
+									const timeout2 = setTimeout(() => {
+										if (!userScrolled) {
+											tryRestore();
+											const timeout3 = setTimeout(() => {
+												if (!userScrolled) {
+													tryRestore();
+												}
+											}, 300);
+											restoreTimeouts.add(timeout3);
+										}
+									}, 100);
+									restoreTimeouts.add(timeout2);
+								}
 							}, 50);
+							restoreTimeouts.add(timeout1);
 						}
 					}
 				}
