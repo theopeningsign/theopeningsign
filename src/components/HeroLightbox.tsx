@@ -293,7 +293,9 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                     }}
                     style={{ 
                         visibility: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'hidden' : 'visible',
-                        display: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'none' : 'block'
+                        display: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'none' : 'block',
+                        willChange: 'opacity',
+                        transform: 'translateZ(0)'
                     }}
                     />
                 </div>

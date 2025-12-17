@@ -217,10 +217,12 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 						{...(priority ? {} : { loading: 'lazy' })}
 						onLoad={handleLoad}
 						onError={handleError}
-						style={{ 
-							visibility: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'hidden' : 'visible',
-							display: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'none' : 'block'
-						}}
+					style={{ 
+						visibility: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'hidden' : 'visible',
+						display: (imgLoading && !hasLoadedRef.current) || (imgError && !hasLoadedRef.current) ? 'none' : 'block',
+						willChange: 'opacity',
+						transform: 'translateZ(0)'
+					}}
 					/>
 				</div>
 			)}
