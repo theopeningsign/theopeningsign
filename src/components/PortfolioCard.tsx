@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PortfolioItem } from '@/lib/types';
 import { isNotionImageUrl } from '@/lib/notion';
-import { scheduleImageReload, PORTFOLIO_LIST_ERROR_KEY, PORTFOLIO_LIST_RELOAD_FLAG } from '@/lib/imageReload';
+import { scheduleImageReload, PORTFOLIO_LIST_ERROR_KEY, PORTFOLIO_LIST_RELOAD_FLAG, MAX_REFRESH_ATTEMPTS } from '@/lib/imageReload';
 
 interface Props {
 	item: PortfolioItem;
@@ -26,18 +26,26 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 	const hasNotifiedRef = useRef(false); // priority 이미지 로드 완료 알림 여부
 
 	const handleImageError = () => {
-		// 이미지 로드 실패 시에도 스피너를 계속 보여줌 (사용자는 로딩 중인 것으로 인식)
+		// 현재 재시도 횟수 확인
+		const attempts = Number.parseInt(
+			sessionStorage.getItem(PORTFOLIO_LIST_ERROR_KEY) || '0', 
+			10
+		);
+		
+		// 3번 도달했으면 재시도 안 함
+		if (attempts >= MAX_REFRESH_ATTEMPTS) {
+			setImgLoading(false);
+			return;
+		}
+		
+		// 아직 3번 안 됐으면 재시도
 		if (forceShowTimeoutRef.current) {
 			clearTimeout(forceShowTimeoutRef.current);
 			forceShowTimeoutRef.current = null;
 		}
 		setImgError(true);
-		setImgLoading(true); // 스피너 계속 표시
-		// hasLoadedRef는 true로 설정하지 않아서 재시도 가능하게 함
+		setImgLoading(true);
 		
-		// priority 이미지 알림은 이미지가 실제로 로드될 때만 수행
-		
-		// 목록 페이지에서 첫 번째 실패만 처리 (여러 이미지가 동시에 실패해도 한 번만 새로고침)
 		if (item.coverImageUrl) {
 			const reloadScheduled = sessionStorage.getItem(PORTFOLIO_LIST_RELOAD_FLAG);
 			if (!reloadScheduled) {
