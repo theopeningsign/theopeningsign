@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import PortfolioGrid from '@/components/PortfolioGrid';
 import type { PortfolioItem } from '@/lib/types';
-import { clearImageErrorFlags, PORTFOLIO_LIST_RELOAD_FLAG } from '@/lib/imageReload';
+import { clearImageErrorFlags, PORTFOLIO_LIST_RELOAD_FLAG, PORTFOLIO_LIST_ERROR_KEY, MAX_REFRESH_ATTEMPTS } from '@/lib/imageReload';
 
 interface Props {
 	items: PortfolioItem[];
@@ -22,6 +22,7 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 	const router = useRouter();
 	const [itemsPerPage, setItemsPerPage] = useState(9);
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
+	const [showRetryModal, setShowRetryModal] = useState(false);
 	const filterButtonRef = useRef<HTMLButtonElement>(null);
 	const filterDropdownRef = useRef<HTMLDivElement>(null);
 	const [filterDropdownStyle, setFilterDropdownStyle] = useState<{ top: number; left: number } | null>(null);
@@ -34,6 +35,27 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 	useEffect(() => {
 		clearImageErrorFlags();
 	}, [currentPage]);
+
+	// 최대 재시도 도달 여부 확인 및 모달 표시
+	useEffect(() => {
+		if (typeof window === 'undefined') return;
+		
+		const checkRetryStatus = () => {
+			const attempts = Number.parseInt(sessionStorage.getItem(PORTFOLIO_LIST_ERROR_KEY) || '0', 10);
+			if (attempts >= MAX_REFRESH_ATTEMPTS) {
+				setShowRetryModal(true);
+			}
+		};
+
+		// 초기 확인
+		checkRetryStatus();
+
+		// 주기적으로 확인 (재시도가 진행 중일 수 있으므로)
+		const interval = setInterval(checkRetryStatus, 500);
+		
+		return () => clearInterval(interval);
+	}, []);
+
 
 	// 화면 크기에 따라 페이지당 아이템 수 결정
 	useEffect(() => {
@@ -342,6 +364,26 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 					<p className="text-sm text-slate-600">
 						{currentPage} / {totalPages} 페이지
 					</p>
+				</div>
+			)}
+
+			{/* 최대 재시도 도달 시 모달 */}
+			{showRetryModal && (
+				<div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowRetryModal(false)}>
+					<div className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+						<h3 className="mb-4 text-lg font-semibold text-slate-900">URL 갱신 필요</h3>
+						<p className="mb-6 text-sm text-slate-600">
+							이미지 로드를 위해 새로고침 해주세요
+						</p>
+						<button
+							onClick={() => {
+								window.location.reload();
+							}}
+							className="w-full rounded-lg bg-orange-400 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
+						>
+							새로고침
+						</button>
+					</div>
 				</div>
 			)}
 		</div>

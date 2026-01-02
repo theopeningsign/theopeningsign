@@ -163,6 +163,7 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 		};
 	}, [item.coverImageUrl, imgLoading, priority, onPriorityLoad]);
 
+
 	// 타임아웃 제거: 에러가 나도 스피너를 계속 보여주기 위해 강제 표시하지 않음
 
 	// 상세 페이지로는 Notion 원본 page.id를 그대로 전달 (하이픈 포함)
