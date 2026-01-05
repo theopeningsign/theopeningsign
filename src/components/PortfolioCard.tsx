@@ -26,14 +26,25 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 	const hasNotifiedRef = useRef(false); // priority 이미지 로드 완료 알림 여부
 
 	const handleImageError = () => {
+		console.log('🔴 Image Error in PortfolioCard:', {
+			url: item.coverImageUrl,
+			title: item.title,
+			timestamp: new Date().toISOString(),
+			hasLoaded: hasLoadedRef.current,
+			isFromBfcache: sessionStorage.getItem('bfcache_detected') === 'true'
+		});
+
 		// 현재 재시도 횟수 확인
 		const attempts = Number.parseInt(
 			sessionStorage.getItem(PORTFOLIO_LIST_ERROR_KEY) || '0', 
 			10
 		);
 		
+		console.log('🔄 Retry attempts:', attempts, '/ max:', MAX_REFRESH_ATTEMPTS);
+		
 		// 3번 도달했으면 재시도 안 함
 		if (attempts >= MAX_REFRESH_ATTEMPTS) {
+			console.log('⛔ Max retry attempts reached, giving up');
 			setImgLoading(false);
 			return;
 		}
@@ -49,8 +60,11 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 		if (item.coverImageUrl) {
 			const reloadScheduled = sessionStorage.getItem(PORTFOLIO_LIST_RELOAD_FLAG);
 			if (!reloadScheduled) {
+				console.log('📋 Scheduling image reload...');
 				sessionStorage.setItem(PORTFOLIO_LIST_RELOAD_FLAG, 'true');
 				scheduleImageReload(PORTFOLIO_LIST_ERROR_KEY, router);
+			} else {
+				console.log('⏳ Image reload already scheduled');
 			}
 		}
 	};

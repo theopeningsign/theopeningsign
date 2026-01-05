@@ -36,6 +36,46 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 		clearImageErrorFlags();
 	}, [currentPage]);
 
+	// 🔍 디버깅: bfcache 복원 시 JS 재실행 여부 확인
+	useEffect(() => {
+		console.log('🔄 PortfolioPaginatedGrid mounted/remounted at:', new Date().toISOString());
+		
+		const handlePageshow = (e: PageTransitionEvent) => {
+			console.log('📱 Pageshow event:', {
+				persisted: e.persisted,
+				type: e.type,
+				timestamp: new Date().toISOString(),
+				url: window.location.href
+			});
+			
+			if (e.persisted) {
+				console.log('🎯 bfcache 복원됨! 이미지 재시도 로직이 실행될까?');
+				sessionStorage.setItem('bfcache_detected', 'true');
+				
+				// bfcache 플래그를 일정 시간 후 제거 (다음 정상 접속과 구분)
+				setTimeout(() => {
+					sessionStorage.removeItem('bfcache_detected');
+				}, 10000); // 10초
+			}
+		};
+		
+		const handleVisibilityChange = () => {
+			console.log('👁️ Visibility change:', {
+				state: document.visibilityState,
+				timestamp: new Date().toISOString(),
+				url: window.location.href
+			});
+		};
+		
+		window.addEventListener('pageshow', handlePageshow);
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+		
+		return () => {
+			window.removeEventListener('pageshow', handlePageshow);
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		};
+	}, []);
+
 	// 최대 재시도 도달 여부 확인 및 모달 표시
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
