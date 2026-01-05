@@ -70,25 +70,25 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 				console.log('🎯 bfcache 복원됨! 이미지 강제 재검증 시작');
 				sessionStorage.setItem('bfcache_detected', 'true');
 				
-				// 모바일 Safari 감지
-				const isMobileSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
-				console.log('📱 Mobile Safari detected:', isMobileSafari);
+				// 모든 모바일 디바이스 감지 (iOS Safari, iPhone Chrome, Android Chrome 등)
+				const isMobile = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent);
+				console.log('📱 Mobile device detected:', isMobile);
 				
-				if (isMobileSafari) {
-					// 모바일 Safari에서는 더 빨리, 더 적극적으로 처리
+				if (isMobile) {
+					// 모바일에서는 더 빨리, 더 적극적으로 처리
 					setTimeout(() => {
-						console.log('🍎 Mobile Safari: Quick image check and potential force refresh');
+						console.log('📱 Mobile: Quick image check and potential force refresh');
 						const notionImages = document.querySelectorAll('img[src*="notion"]');
 						let hasFailedImages = false;
 						
-						console.log(`📸 Mobile Safari: Found ${notionImages.length} Notion images to check`);
+						console.log(`📸 Mobile: Found ${notionImages.length} Notion images to check`);
 						
-						// 모바일에서는 더 엄격한 검증
+						// 모바일에서는 더 엄격한 검증 (iOS Safari, iPhone/Android Chrome 모두)
 						notionImages.forEach((img: Element, index: number) => {
 							const imgElement = img as HTMLImageElement;
 							const src = imgElement.src;
 							
-							// 모바일 Safari에서는 더 많은 조건으로 실패 판단
+							// 모바일에서는 더 많은 조건으로 실패 판단
 							const isImageFailed = (
 								!imgElement.complete ||
 								imgElement.naturalHeight === 0 ||
@@ -102,7 +102,8 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 								complete: imgElement.complete,
 								naturalHeight: imgElement.naturalHeight,
 								naturalWidth: imgElement.naturalWidth,
-								failed: isImageFailed
+								failed: isImageFailed,
+								userAgent: navigator.userAgent.substring(0, 50)
 							});
 							
 							if (isImageFailed) {
@@ -111,7 +112,7 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 						});
 						
 						if (hasFailedImages) {
-							console.log('🚨 Mobile Safari: Failed images detected! Trying server refresh first...');
+							console.log('🚨 Mobile: Failed images detected! Trying server refresh first...');
 							router.refresh();
 							
 							// 모바일에서는 서버 refresh가 안되면 3초 후 강제 새로고침
@@ -122,19 +123,19 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 								});
 								
 								if (stillFailedImages) {
-									console.log('💀 Mobile Safari: Server refresh insufficient, forcing page reload');
+									console.log('💀 Mobile: Server refresh insufficient, forcing page reload');
 									window.location.reload();
 								} else {
-									console.log('✅ Mobile Safari: Server refresh successful!');
+									console.log('✅ Mobile: Server refresh successful!');
 								}
 							}, 3000);
 						} else {
-							console.log('✅ Mobile Safari: All images loading fine');
+							console.log('✅ Mobile: All images loading fine');
 						}
 						
 						// bfcache 플래그 제거
 						sessionStorage.removeItem('bfcache_detected');
-					}, 500); // 모바일은 더 빠르게 (500ms)
+					}, 500); // 모바일은 더 빠르게 (iOS Safari, Android Chrome 모두)
 				} else {
 					// 데스크톱은 기존 로직 유지 (더 정교한 처리)
 					setTimeout(() => {
