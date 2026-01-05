@@ -40,6 +40,24 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 	useEffect(() => {
 		console.log('🔄 PortfolioPaginatedGrid mounted/remounted at:', new Date().toISOString());
 		
+		// 🧪 개발/테스트용: 재시도 모달 테스트 함수 등록 (항상 사용 가능)
+		if (typeof window !== 'undefined') {
+			(window as any).testRetryModal = () => {
+				console.log('🧪 Testing retry modal...');
+				sessionStorage.setItem(PORTFOLIO_LIST_ERROR_KEY, '3'); // 최대 재시도 설정
+				// 체크 함수를 강제로 실행
+				const checkRetryStatus = () => {
+					const attempts = Number.parseInt(sessionStorage.getItem(PORTFOLIO_LIST_ERROR_KEY) || '0', 10);
+					if (attempts >= MAX_REFRESH_ATTEMPTS) {
+						setShowRetryModal(true);
+						console.log('✅ Retry modal should be visible now');
+					}
+				};
+				checkRetryStatus();
+			};
+			console.log('🧪 테스트 함수 등록됨: window.testRetryModal() 실행해서 새로고침 버튼 테스트 가능');
+		}
+		
 		const handlePageshow = (e: PageTransitionEvent) => {
 			console.log('📱 Pageshow event:', {
 				persisted: e.persisted,
@@ -86,24 +104,6 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 						router.refresh();
 					} else {
 						console.log('✅ All images are loading fine');
-						
-						// 🧪 임시: 재시도 모달 테스트 (콘솔에서 실행 가능)
-						if (typeof window !== 'undefined') {
-							(window as any).testRetryModal = () => {
-								console.log('🧪 Testing retry modal...');
-								sessionStorage.setItem(PORTFOLIO_LIST_ERROR_KEY, '3'); // 최대 재시도 설정
-								// 체크 함수를 강제로 실행
-								const checkRetryStatus = () => {
-									const attempts = Number.parseInt(sessionStorage.getItem(PORTFOLIO_LIST_ERROR_KEY) || '0', 10);
-									if (attempts >= MAX_REFRESH_ATTEMPTS) {
-										setShowRetryModal(true);
-										console.log('✅ Retry modal should be visible now');
-									}
-								};
-								checkRetryStatus();
-							};
-							console.log('🧪 테스트 함수 등록됨: window.testRetryModal() 실행해서 새로고침 버튼 테스트 가능');
-						}
 					}
 					
 					// bfcache 플래그 제거
