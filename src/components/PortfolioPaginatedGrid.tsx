@@ -70,45 +70,110 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 				console.log('🎯 bfcache 복원됨! 이미지 강제 재검증 시작');
 				sessionStorage.setItem('bfcache_detected', 'true');
 				
-				// bfcache 복원 시 이미지 상태 강제 체크
-				setTimeout(() => {
-					console.log('🔍 Checking all Notion images for validity...');
-					const notionImages = document.querySelectorAll('img[src*="notion"]');
-					let hasFailedImages = false;
-					
-					console.log(`📸 Found ${notionImages.length} Notion images to check`);
-					
-					notionImages.forEach((img: Element, index: number) => {
-						const imgElement = img as HTMLImageElement;
-						const src = imgElement.src;
+				// 모바일 Safari 감지
+				const isMobileSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
+				console.log('📱 Mobile Safari detected:', isMobileSafari);
+				
+				if (isMobileSafari) {
+					// 모바일 Safari에서는 더 빨리, 더 적극적으로 처리
+					setTimeout(() => {
+						console.log('🍎 Mobile Safari: Quick image check and potential force refresh');
+						const notionImages = document.querySelectorAll('img[src*="notion"]');
+						let hasFailedImages = false;
 						
-						// 이미지가 로드되지 않았거나 자연 크기가 0이면 실패로 간주
-						const isImageFailed = !imgElement.complete || imgElement.naturalHeight === 0;
+						console.log(`📸 Mobile Safari: Found ${notionImages.length} Notion images to check`);
 						
-						console.log(`🖼️ Image ${index + 1}:`, {
-							src: src.substring(src.length - 50), // URL 끝부분만 로깅
-							complete: imgElement.complete,
-							naturalHeight: imgElement.naturalHeight,
-							failed: isImageFailed
+						// 모바일에서는 더 엄격한 검증
+						notionImages.forEach((img: Element, index: number) => {
+							const imgElement = img as HTMLImageElement;
+							const src = imgElement.src;
+							
+							// 모바일 Safari에서는 더 많은 조건으로 실패 판단
+							const isImageFailed = (
+								!imgElement.complete ||
+								imgElement.naturalHeight === 0 ||
+								imgElement.naturalWidth === 0 ||
+								// Notion URL 만료 시간 추정 (X-Amz-Expires 체크)
+								(src.includes('X-Amz-Expires') && src.includes('X-Amz-Date'))
+							);
+							
+							console.log(`🖼️ Mobile Image ${index + 1}:`, {
+								src: src.substring(src.length - 50),
+								complete: imgElement.complete,
+								naturalHeight: imgElement.naturalHeight,
+								naturalWidth: imgElement.naturalWidth,
+								failed: isImageFailed
+							});
+							
+							if (isImageFailed) {
+								hasFailedImages = true;
+							}
 						});
 						
-						if (isImageFailed) {
-							hasFailedImages = true;
+						if (hasFailedImages) {
+							console.log('🚨 Mobile Safari: Failed images detected! Trying server refresh first...');
+							router.refresh();
+							
+							// 모바일에서는 서버 refresh가 안되면 3초 후 강제 새로고침
+							setTimeout(() => {
+								const stillFailedImages = Array.from(document.querySelectorAll('img[src*="notion"]')).some(img => {
+									const imgElement = img as HTMLImageElement;
+									return !imgElement.complete || imgElement.naturalHeight === 0;
+								});
+								
+								if (stillFailedImages) {
+									console.log('💀 Mobile Safari: Server refresh insufficient, forcing page reload');
+									window.location.reload();
+								} else {
+									console.log('✅ Mobile Safari: Server refresh successful!');
+								}
+							}, 3000);
+						} else {
+							console.log('✅ Mobile Safari: All images loading fine');
 						}
-					});
-					
-					if (hasFailedImages) {
-						console.log('🚨 Failed images detected! Triggering server refresh...');
-						// 재시도 로직을 직접 호출하지 말고, 서버 컴포넌트를 새로고침
-						// 이렇게 하면 새로운 Notion URL을 받아올 수 있음
-						router.refresh();
-					} else {
-						console.log('✅ All images are loading fine');
-					}
-					
-					// bfcache 플래그 제거
-					sessionStorage.removeItem('bfcache_detected');
-				}, 1000); // 1초 후 체크 (DOM이 안정화될 시간)
+						
+						// bfcache 플래그 제거
+						sessionStorage.removeItem('bfcache_detected');
+					}, 500); // 모바일은 더 빠르게 (500ms)
+				} else {
+					// 데스크톱은 기존 로직 유지 (더 정교한 처리)
+					setTimeout(() => {
+						console.log('🖥️ Desktop: Checking all Notion images for validity...');
+						const notionImages = document.querySelectorAll('img[src*="notion"]');
+						let hasFailedImages = false;
+						
+						console.log(`📸 Desktop: Found ${notionImages.length} Notion images to check`);
+						
+						notionImages.forEach((img: Element, index: number) => {
+							const imgElement = img as HTMLImageElement;
+							const src = imgElement.src;
+							
+							// 데스크톱은 기존 로직 유지
+							const isImageFailed = !imgElement.complete || imgElement.naturalHeight === 0;
+							
+							console.log(`🖼️ Desktop Image ${index + 1}:`, {
+								src: src.substring(src.length - 50),
+								complete: imgElement.complete,
+								naturalHeight: imgElement.naturalHeight,
+								failed: isImageFailed
+							});
+							
+							if (isImageFailed) {
+								hasFailedImages = true;
+							}
+						});
+						
+						if (hasFailedImages) {
+							console.log('🚨 Desktop: Failed images detected! Triggering server refresh...');
+							router.refresh();
+						} else {
+							console.log('✅ Desktop: All images are loading fine');
+						}
+						
+						// bfcache 플래그 제거
+						sessionStorage.removeItem('bfcache_detected');
+					}, 1000); // 데스크톱은 기존 1초 유지
+				}
 			}
 		};
 		
