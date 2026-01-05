@@ -49,13 +49,66 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 			});
 			
 			if (e.persisted) {
-				console.log('🎯 bfcache 복원됨! 이미지 재시도 로직이 실행될까?');
+				console.log('🎯 bfcache 복원됨! 이미지 강제 재검증 시작');
 				sessionStorage.setItem('bfcache_detected', 'true');
 				
-				// bfcache 플래그를 일정 시간 후 제거 (다음 정상 접속과 구분)
+				// bfcache 복원 시 이미지 상태 강제 체크
 				setTimeout(() => {
+					console.log('🔍 Checking all Notion images for validity...');
+					const notionImages = document.querySelectorAll('img[src*="notion"]');
+					let hasFailedImages = false;
+					
+					console.log(`📸 Found ${notionImages.length} Notion images to check`);
+					
+					notionImages.forEach((img: Element, index: number) => {
+						const imgElement = img as HTMLImageElement;
+						const src = imgElement.src;
+						
+						// 이미지가 로드되지 않았거나 자연 크기가 0이면 실패로 간주
+						const isImageFailed = !imgElement.complete || imgElement.naturalHeight === 0;
+						
+						console.log(`🖼️ Image ${index + 1}:`, {
+							src: src.substring(src.length - 50), // URL 끝부분만 로깅
+							complete: imgElement.complete,
+							naturalHeight: imgElement.naturalHeight,
+							failed: isImageFailed
+						});
+						
+						if (isImageFailed) {
+							hasFailedImages = true;
+						}
+					});
+					
+					if (hasFailedImages) {
+						console.log('🚨 Failed images detected! Triggering server refresh...');
+						// 재시도 로직을 직접 호출하지 말고, 서버 컴포넌트를 새로고침
+						// 이렇게 하면 새로운 Notion URL을 받아올 수 있음
+						router.refresh();
+					} else {
+						console.log('✅ All images are loading fine');
+						
+						// 🧪 임시: 재시도 모달 테스트 (콘솔에서 실행 가능)
+						if (typeof window !== 'undefined') {
+							(window as any).testRetryModal = () => {
+								console.log('🧪 Testing retry modal...');
+								sessionStorage.setItem(PORTFOLIO_LIST_ERROR_KEY, '3'); // 최대 재시도 설정
+								// 체크 함수를 강제로 실행
+								const checkRetryStatus = () => {
+									const attempts = Number.parseInt(sessionStorage.getItem(PORTFOLIO_LIST_ERROR_KEY) || '0', 10);
+									if (attempts >= MAX_REFRESH_ATTEMPTS) {
+										setShowRetryModal(true);
+										console.log('✅ Retry modal should be visible now');
+									}
+								};
+								checkRetryStatus();
+							};
+							console.log('🧪 테스트 함수 등록됨: window.testRetryModal() 실행해서 새로고침 버튼 테스트 가능');
+						}
+					}
+					
+					// bfcache 플래그 제거
 					sessionStorage.removeItem('bfcache_detected');
-				}, 10000); // 10초
+				}, 1000); // 1초 후 체크 (DOM이 안정화될 시간)
 			}
 		};
 		
