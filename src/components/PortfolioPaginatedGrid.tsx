@@ -67,114 +67,13 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 			});
 			
 			if (e.persisted) {
-				console.log('🎯 bfcache 복원됨! 이미지 강제 재검증 시작');
-				sessionStorage.setItem('bfcache_detected', 'true');
-				
-				// 모든 모바일 디바이스 감지 (iOS Safari, iPhone Chrome, Android Chrome 등)
-				const isMobile = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent);
-				console.log('📱 Mobile device detected:', isMobile);
-				
-				if (isMobile) {
-					// 모바일에서는 더 빨리, 더 적극적으로 처리
-					setTimeout(() => {
-						console.log('📱 Mobile: Quick image check and potential force refresh');
-						const notionImages = document.querySelectorAll('img[src*="notion"]');
-						let hasFailedImages = false;
-						
-						console.log(`📸 Mobile: Found ${notionImages.length} Notion images to check`);
-						
-						// 모바일에서는 더 엄격한 검증 (iOS Safari, iPhone/Android Chrome 모두)
-						notionImages.forEach((img: Element, index: number) => {
-							const imgElement = img as HTMLImageElement;
-							const src = imgElement.src;
-							
-							// 모바일에서는 더 많은 조건으로 실패 판단
-							const isImageFailed = (
-								!imgElement.complete ||
-								imgElement.naturalHeight === 0 ||
-								imgElement.naturalWidth === 0 ||
-								// Notion URL 만료 시간 추정 (X-Amz-Expires 체크)
-								(src.includes('X-Amz-Expires') && src.includes('X-Amz-Date'))
-							);
-							
-							console.log(`🖼️ Mobile Image ${index + 1}:`, {
-								src: src.substring(src.length - 50),
-								complete: imgElement.complete,
-								naturalHeight: imgElement.naturalHeight,
-								naturalWidth: imgElement.naturalWidth,
-								failed: isImageFailed,
-								userAgent: navigator.userAgent.substring(0, 50)
-							});
-							
-							if (isImageFailed) {
-								hasFailedImages = true;
-							}
-						});
-						
-						if (hasFailedImages) {
-							console.log('🚨 Mobile: Failed images detected! Trying server refresh first...');
-							router.refresh();
-							
-							// 모바일에서는 서버 refresh가 안되면 3초 후 강제 새로고침
-							setTimeout(() => {
-								const stillFailedImages = Array.from(document.querySelectorAll('img[src*="notion"]')).some(img => {
-									const imgElement = img as HTMLImageElement;
-									return !imgElement.complete || imgElement.naturalHeight === 0;
-								});
-								
-								if (stillFailedImages) {
-									console.log('💀 Mobile: Server refresh insufficient, forcing page reload');
-									window.location.reload();
-								} else {
-									console.log('✅ Mobile: Server refresh successful!');
-								}
-							}, 3000);
-						} else {
-							console.log('✅ Mobile: All images loading fine');
-						}
-						
-						// bfcache 플래그 제거
-						sessionStorage.removeItem('bfcache_detected');
-					}, 500); // 모바일은 더 빠르게 (iOS Safari, Android Chrome 모두)
-				} else {
-					// 데스크톱은 기존 로직 유지 (더 정교한 처리)
-					setTimeout(() => {
-						console.log('🖥️ Desktop: Checking all Notion images for validity...');
-						const notionImages = document.querySelectorAll('img[src*="notion"]');
-						let hasFailedImages = false;
-						
-						console.log(`📸 Desktop: Found ${notionImages.length} Notion images to check`);
-						
-						notionImages.forEach((img: Element, index: number) => {
-							const imgElement = img as HTMLImageElement;
-							const src = imgElement.src;
-							
-							// 데스크톱은 기존 로직 유지
-							const isImageFailed = !imgElement.complete || imgElement.naturalHeight === 0;
-							
-							console.log(`🖼️ Desktop Image ${index + 1}:`, {
-								src: src.substring(src.length - 50),
-								complete: imgElement.complete,
-								naturalHeight: imgElement.naturalHeight,
-								failed: isImageFailed
-							});
-							
-							if (isImageFailed) {
-								hasFailedImages = true;
-							}
-						});
-						
-						if (hasFailedImages) {
-							console.log('🚨 Desktop: Failed images detected! Triggering server refresh...');
-							router.refresh();
-						} else {
-							console.log('✅ Desktop: All images are loading fine');
-						}
-						
-						// bfcache 플래그 제거
-						sessionStorage.removeItem('bfcache_detected');
-					}, 1000); // 데스크톱은 기존 1초 유지
-				}
+				console.log('🔄 bfcache 복원 감지! 자동 새로고침으로 이미지 문제 해결');
+				// 간단하고 확실한 해결: bfcache 복원 시 무조건 새로고침
+				// 복잡한 조건 체크 없이 1초 후 자동 새로고침
+				setTimeout(() => {
+					console.log('🚀 자동 새로고침 실행 (bfcache 이미지 문제 해결)');
+					window.location.reload();
+				}, 1000);
 			}
 		};
 		
