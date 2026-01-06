@@ -227,6 +227,7 @@ function PortfolioCard({ item, priority = false, onPriorityLoad, showPriorityIma
 					src={item.coverImageUrl || '/placeholder.svg'}
 					alt={item.title}
 					fill
+					data-portfolio-image="true"
 					className={`object-cover ${hasLoadedRef.current && !imgLoading ? '' : 'transition-opacity duration-100'} ${imgLoading || (priority && !showPriorityImages) ? 'opacity-0' : 'opacity-100'}`}
 					placeholder="blur"
 					blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMTAwJScgaGVpZ2h0PScxMDAlJyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnLz4="

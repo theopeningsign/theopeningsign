@@ -213,6 +213,33 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 		return () => clearTimeout(timer);
 	}, [totalPages, currentPage]);
 
+	// 페이지 진입 후 5초 동안 대부분의 카드가 스피너/백색 상태라면 강제 새로고침으로 복구
+	useEffect(() => {
+		if (typeof window === 'undefined') return;
+
+		const timeoutId = window.setTimeout(() => {
+			const imgs = Array.from(
+				document.querySelectorAll<HTMLImageElement>('img[data-portfolio-image="true"]')
+			);
+
+			if (imgs.length === 0) return;
+
+			// 스피너이거나, 하얀 박스(이미지 높이 0) 상태를 실패로 간주
+			const failed = imgs.filter((img) => !img.complete || img.naturalHeight === 0);
+			const failRatio = failed.length / imgs.length;
+
+			// 절반 이상이 실패 상태이면 이 페이지는 꼬인 것으로 보고 강제 복구
+			if (failRatio >= 0.5) {
+				console.log('⚠️ 대부분의 이미지가 5초 동안 로드되지 않음. 강제 새로고침 실행');
+				window.location.reload();
+				// 새로고침 대신 모달을 띄우고 싶다면 위 줄을 주석 처리하고 아래를 사용:
+				// setShowRetryModal(true);
+			}
+		}, 5000);
+
+		return () => window.clearTimeout(timeoutId);
+	}, [currentPage]);
+
 	// 진료과목 토글
 	const handleDepartmentToggle = (dept: string) => {
 		const newDepartments = selectedDepartments.includes(dept)
