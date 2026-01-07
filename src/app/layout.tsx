@@ -14,8 +14,16 @@ const notoSans = Noto_Sans_KR({
 
 export const metadata: Metadata = {
   title: "더오프닝사인 THE OPENING SIGN | 병원 간판 전문 업체",
-  description: "더오프닝사인 THE OPENING SIGN은 병원 간판 전문 제작 업체입니다. 다양한 병원 간판 시공 포트폴리오를 확인하세요.",
-  keywords: ["더오프닝사인", "THE OPENING SIGN", "병원 간판", "병원 간판 제작", "병원 간판 시공", "병원 간판 포트폴리오"],
+  description:
+    "더오프닝사인 THE OPENING SIGN은 병원 간판 전문 제작 업체입니다. 다양한 병원 간판 시공 포트폴리오를 확인하세요.",
+  keywords: [
+    "더오프닝사인",
+    "THE OPENING SIGN",
+    "병원 간판",
+    "병원 간판 제작",
+    "병원 간판 시공",
+    "병원 간판 포트폴리오",
+  ],
   icons: {
     icon: [
       { url: "/onlylogo.png?v=2" },
@@ -25,13 +33,21 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "더오프닝사인 THE OPENING SIGN | 병원 간판 전문 업체",
-    description: "더오프닝사인 THE OPENING SIGN은 병원 간판 전문 제작 업체입니다. 다양한 병원 간판 시공 포트폴리오를 확인하세요.",
-    url: process.env.SITE_URL || "https://theopeningsign.vercel.app",
+    description:
+      "더오프닝사인 THE OPENING SIGN은 병원 간판 전문 제작 업체입니다. 다양한 병원 간판 시공 포트폴리오를 확인하세요.",
+    url: "https://theopeningsign.vercel.app",
     siteName: "더오프닝사인 THE OPENING SIGN",
     type: "website",
-    images: [{ url: "/logo_nail.png", width: 1200, height: 1200 }],
+    images: [
+      {
+        url: "https://theopeningsign.vercel.app/logo_nail.png",
+        width: 1200,
+        height: 1200,
+        alt: "더오프닝사인 로고",
+      },
+    ],
   },
-  metadataBase: new URL(process.env.SITE_URL || "https://theopeningsign.vercel.app"),
+  metadataBase: new URL("https://theopeningsign.vercel.app"),
 };
 
 export default function RootLayout({
