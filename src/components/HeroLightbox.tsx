@@ -232,7 +232,7 @@ export default function HeroLightbox({ cover, covers, images, title, coverIndex 
                 </div>
             )}
             {cover && (
-                <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute inset-0 overflow-hidden bg-slate-100">
                     <Image
                         src={cover}
                         alt={title}
