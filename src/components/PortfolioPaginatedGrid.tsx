@@ -462,6 +462,11 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 						</p>
 						<button
 							onClick={() => {
+								if (typeof window !== 'undefined') {
+									sessionStorage.removeItem(PORTFOLIO_LIST_ERROR_KEY);
+									sessionStorage.removeItem(PORTFOLIO_LIST_RELOAD_FLAG);
+									sessionStorage.removeItem('isRefreshing');
+								}
 								window.location.reload();
 							}}
 							className="w-full rounded-lg bg-orange-400 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
