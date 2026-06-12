@@ -9,25 +9,40 @@ interface Props {
 }
 
 // 메인 히어로 배경 슬라이드쇼
+// - 방문할 때마다 사진 순서를 무작위(랜덤)로 섞어서 보여줌
 // - 크로스페이드 전환 + 켄번스(느린 줌) 효과
-// - 위에 흰색 프로스트 오버레이를 깔아 로고/문구 가독성 유지
+// - 위에 다크 오버레이를 깔아 로고/문구 가독성 유지
 // - 장식용이므로 pointer-events 없음 (클릭은 상위 Link가 처리)
 export default function HeroSlideshow({ images, intervalMs = 5500 }: Props) {
+	// 초기값은 서버 순서(SSR 일치 → 하이드레이션 mismatch 방지), 마운트 후 클라이언트에서 섞음
+	const [order, setOrder] = useState(images);
 	const [current, setCurrent] = useState(0);
 
+	// 마운트 시 한 번 무작위로 섞기 (Fisher-Yates)
 	useEffect(() => {
-		if (images.length <= 1) return;
+		const shuffled = [...images];
+		for (let i = shuffled.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+		}
+		setOrder(shuffled);
+		setCurrent(0);
+	}, [images]);
+
+	// 일정 간격으로 다음 사진으로 전환
+	useEffect(() => {
+		if (order.length <= 1) return;
 		const id = setInterval(() => {
-			setCurrent((prev) => (prev + 1) % images.length);
+			setCurrent((prev) => (prev + 1) % order.length);
 		}, intervalMs);
 		return () => clearInterval(id);
-	}, [images.length, intervalMs]);
+	}, [order.length, intervalMs]);
 
-	if (images.length === 0) return null;
+	if (order.length === 0) return null;
 
 	return (
 		<div className="pointer-events-none absolute inset-0 -z-0 overflow-hidden" aria-hidden="true">
-			{images.map((src, i) => (
+			{order.map((src, i) => (
 				<div
 					key={src}
 					className="absolute inset-0 transition-opacity duration-[1400ms] ease-in-out"
@@ -38,7 +53,7 @@ export default function HeroSlideshow({ images, intervalMs = 5500 }: Props) {
 						alt=""
 						fill
 						priority={i === 0}
-						quality={90}
+						unoptimized
 						sizes="100vw"
 						className="object-cover"
 						style={{

@@ -20,6 +20,8 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const [itemsPerPage, setItemsPerPage] = useState(9);
+	// itemsPerPage가 실제 화면 크기로 확정됐는지 (확정 전엔 페이지 보정 금지 → 뒤로가기 페이지 튐 방지)
+	const [perPageReady, setPerPageReady] = useState(false);
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const filterButtonRef = useRef<HTMLButtonElement>(null);
 	const filterDropdownRef = useRef<HTMLDivElement>(null);
@@ -37,6 +39,7 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 			setItemsPerPage((prev) => (prev === next ? prev : next));
 		};
 		updateItemsPerPage();
+		setPerPageReady(true); // 실제 화면 기준값으로 확정됨
 		window.addEventListener('resize', updateItemsPerPage);
 		return () => window.removeEventListener('resize', updateItemsPerPage);
 	}, []);
@@ -109,12 +112,15 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 	};
 
 	// 현재 페이지가 총 페이지 수를 넘으면 보정
+	// 단, itemsPerPage가 실제 화면 크기로 확정된 뒤에만 (확정 전 기본값 9로 계산된 totalPages로 보정하면
+	//  모바일에서 6·7페이지가 5페이지로 잘못 튕기는 버그가 생김)
 	useEffect(() => {
+		if (!perPageReady) return;
 		if (currentPage > totalPages && totalPages > 0) {
 			updateURL({ page: totalPages });
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [totalPages, currentPage]);
+	}, [perPageReady, totalPages, currentPage]);
 
 	// 진료과목 토글
 	const handleDepartmentToggle = (dept: string) => {
