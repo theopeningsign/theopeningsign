@@ -32,25 +32,30 @@ export default function Home() {
       <HeroSlideshow images={heroImages} />
       {/* 가운데 정렬 단일 컬럼 — 정돈된 고급 레이아웃 */}
       <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center px-6 text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/90 sm:text-sm">
-          Hospital Signage Professional Team
+        <p className="text-lg sm:text-xl font-semibold uppercase tracking-[0.28em] text-white/90">
+          Hospital Signage <span className="whitespace-nowrap">Professional Team</span>
         </p>
-        <div className="mt-5 mx-auto h-px w-12 bg-white/40" />
+        {/* 구분선 제거 — 색만 빼고 빈 spacer로 둬서 기존 여백/간격은 유지 */}
+        <div className="mt-5 mx-auto h-px w-12" />
         <p className="mt-6 max-w-xl text-pretty break-keep text-[15px] leading-8 text-white/85 sm:text-base">
           국내 1위 간판 전문 서비스 <span className="font-semibold text-white">『간판의품격』</span>에서 다양한 병의원 프로젝트 경험을 바탕으로 탄생한 <span className="whitespace-nowrap">병의원 사이니지 전문팀입니다.</span>
         </p>
         <p className="mt-3 max-w-xl text-pretty break-keep text-[15px] leading-8 text-white/75 sm:text-base">
           디테일을 중시하며, 디자인의 힘으로 <span className="whitespace-nowrap">차별화된 결과를 만들어냅니다.</span>
         </p>
-        {/* 로고 (흰색, 글자 아래에 배치) — brightness(0) invert(1)로 주황 로고를 흰색으로 변환. 원래 주황으로 되돌리려면 이 filter만 빼면 됨 */}
-        <Image
-          src="/logo.png"
-          alt="THE OPENING SIGN"
-          width={520}
-          height={520}
-          className="logo-fade-in mt-[3.75rem] h-auto w-[min(90vw,510px)] [filter:brightness(0)_invert(1)_drop-shadow(0_4px_20px_rgba(0,0,0,0.45))]"
-          priority
-        />
+        {/* 로고 (흰색, 글자 아래) — 필터는 고정 wrapper에, 페이드는 이미지에 분리.
+            (모바일 WebKit에서 필터+애니메이션을 같은 요소에 걸면 검정→흰색으로 튀는 현상 방지)
+            원래 주황으로 되돌리려면 wrapper의 filter만 빼면 됨 */}
+        <div className="mt-[3.75rem] [filter:brightness(0)_invert(1)_drop-shadow(0_4px_20px_rgba(0,0,0,0.45))]">
+          <Image
+            src="/logo.png"
+            alt="THE OPENING SIGN"
+            width={520}
+            height={520}
+            className="logo-fade-in h-auto w-[min(90vw,510px)]"
+            priority
+          />
+        </div>
       </div>
     </section>
     </Link>
