@@ -45,7 +45,7 @@ export default function PrivacyPage() {
 					<h2 className="text-lg font-bold text-slate-900">4. 개인정보 처리의 위탁</h2>
 					<p>회사는 상담 메일 발송을 위해 아래와 같이 개인정보 처리를 위탁합니다.</p>
 					<ul className="list-disc space-y-1 pl-5">
-						<li>수탁업체: Resend (이메일 발송 서비스)</li>
+						<li>수탁업체: Google LLC (Gmail 이메일 발송 서비스)</li>
 						<li>위탁업무: 상담신청 내용의 메일 전송</li>
 					</ul>
 				</section>

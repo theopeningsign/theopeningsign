@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-const TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'hyukjune.gp@gmail.com';
-// 도메인 인증 전에는 Resend 기본 발신 주소 사용
-const FROM_EMAIL = process.env.CONTACT_FROM_EMAIL || 'THE OPENING SIGN <onboarding@resend.dev>';
+const TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'biz@ganpoom.com';
+// Gmail SMTP(앱 비밀번호) 발신 계정. 메일은 이 계정으로 나가고 표시는 "더오프닝사인 상담신청".
+const GMAIL_USER = process.env.GMAIL_USER || 'hyukjune.gp@gmail.com';
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+const FROM_EMAIL = `더오프닝사인 상담신청 <${GMAIL_USER}>`;
 const SITE_URL = process.env.SITE_URL || 'https://theopeningsign.vercel.app';
 
 function esc(v: unknown): string {
@@ -17,9 +19,8 @@ function esc(v: unknown): string {
 type WishItem = { id: string; title: string };
 
 export async function POST(req: NextRequest) {
-	const apiKey = process.env.RESEND_API_KEY;
-	if (!apiKey) {
-		return NextResponse.json({ error: '메일 설정이 완료되지 않았습니다. (RESEND_API_KEY 없음)' }, { status: 500 });
+	if (!GMAIL_APP_PASSWORD) {
+		return NextResponse.json({ error: '메일 설정이 완료되지 않았습니다. (GMAIL_APP_PASSWORD 없음)' }, { status: 500 });
 	}
 
 	let body: Record<string, unknown>;
@@ -72,19 +73,18 @@ export async function POST(req: NextRequest) {
 		</table>
 	</div>`;
 
-	const resend = new Resend(apiKey);
+	const transporter = nodemailer.createTransport({
+		service: 'gmail',
+		auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+	});
 	try {
-		const { error } = await resend.emails.send({
+		await transporter.sendMail({
 			from: FROM_EMAIL,
 			to: TO_EMAIL,
 			replyTo: typeof body.email === 'string' && body.email ? body.email : undefined,
 			subject: `[상담신청] ${esc(body.clinic) || esc(body.department)} / ${esc(body.name)}`,
 			html,
 		});
-		if (error) {
-			console.error('[contact] Resend 오류', error);
-			return NextResponse.json({ error: '메일 발송에 실패했습니다.' }, { status: 502 });
-		}
 		return NextResponse.json({ ok: true });
 	} catch (e) {
 		console.error('[contact] 발송 예외', e);
