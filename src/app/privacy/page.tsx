@@ -67,7 +67,7 @@ export default function PrivacyPage() {
 					<h2 className="text-lg font-bold text-slate-900">7. 개인정보 보호책임자 및 문의처</h2>
 					<ul className="list-disc space-y-1 pl-5">
 						<li>상호: 더오프닝사인 (THE OPENING SIGN)</li>
-						<li>연락처: 010-2366-5876</li>
+						<li>연락처: 1544-3932</li>
 						<li>이메일: theopensign@gmail.com</li>
 						<li>주소: 서울 강서구 공항대로 659 도레미빌딩 7층</li>
 					</ul>
