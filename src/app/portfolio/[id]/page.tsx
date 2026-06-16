@@ -7,6 +7,8 @@ import type { Metadata } from 'next';
 import HeroLightbox from '@/components/HeroLightbox';
 import BackButton from '@/components/BackButton';
 import ScrollToTop from '@/components/ScrollToTop';
+import WishlistButton from '@/components/WishlistButton';
+import WishlistDetailFab from '@/components/WishlistDetailFab';
 
 export const revalidate = 60; // 1분 캐시 (정상 로드 시 빠름, 이미지 실패 시 자동 새로고침)
 
@@ -37,11 +39,15 @@ export default async function PortfolioDetailPage({ params }: Props) {
 		<div className="space-y-8">
 			<ScrollToTop />
 			<BackButton />
+			<WishlistDetailFab id={item.id} title={item.title} />
 			<header className="space-y-1">
 				<h1 className="text-3xl font-extrabold text-slate-900">{item.title}</h1>
 				<p className="text-slate-600">{item.location || '위치 미상'} | {item.type || '기타'} | {item.completedAt ? (() => { try { const parts = item.completedAt.split('-'); if (parts.length >= 2 && parts[0] && parts[1]) { const [y, m] = parts; return `${y}년 ${Number(m)}월`; } } catch {} return '연월 미상'; })() : '연월 미상'}</p>
 				<p className="break-keep text-slate-600" style={{ overflowWrap: 'anywhere' }}>{item.departments && item.departments.length > 0 ? item.departments.join(' · ') : '\u00A0'}</p>
 			</header>
+			<div>
+				<WishlistButton id={item.id} title={item.title} />
+			</div>
 			{/* 메인 이미지(여러 장이면 모두 순서대로 크게 표시) */}
 			{(item.coverImageUrls && item.coverImageUrls.length > 0
 				? item.coverImageUrls

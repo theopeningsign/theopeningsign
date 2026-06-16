@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import PortfolioGrid from '@/components/PortfolioGrid';
 import type { PortfolioItem } from '@/lib/types';
-import { clearImageErrorFlags, PORTFOLIO_LIST_RELOAD_FLAG, PORTFOLIO_LIST_ERROR_KEY, MAX_REFRESH_ATTEMPTS } from '@/lib/imageReload';
 
 interface Props {
 	items: PortfolioItem[];
@@ -21,8 +20,9 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const [itemsPerPage, setItemsPerPage] = useState(9);
+	// itemsPerPage가 실제 화면 크기로 확정됐는지 (확정 전엔 페이지 보정 금지 → 뒤로가기 페이지 튐 방지)
+	const [perPageReady, setPerPageReady] = useState(false);
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
-	const [showRetryModal, setShowRetryModal] = useState(false);
 	const filterButtonRef = useRef<HTMLButtonElement>(null);
 	const filterDropdownRef = useRef<HTMLDivElement>(null);
 	const [filterDropdownStyle, setFilterDropdownStyle] = useState<{ top: number; left: number } | null>(null);
@@ -30,90 +30,6 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 	// URL에서 직접 읽기
 	const selectedDepartments = searchParams.get('departments')?.split(',').filter(Boolean) || [];
 	const currentPage = Number.parseInt(searchParams.get('page') || '1', 10);
-
-	// 페이지 이동 시 세션 기반 이미지 로딩 플래그 초기화
-	useEffect(() => {
-		clearImageErrorFlags();
-	}, [currentPage]);
-
-	// 🔍 디버깅: bfcache 복원 시 JS 재실행 여부 확인
-	useEffect(() => {
-		console.log('🔄 PortfolioPaginatedGrid mounted/remounted at:', new Date().toISOString());
-		
-		// 🧪 개발/테스트용: 재시도 모달 테스트 함수 등록 (항상 사용 가능)
-		if (typeof window !== 'undefined') {
-			(window as any).testRetryModal = () => {
-				console.log('🧪 Testing retry modal...');
-				sessionStorage.setItem(PORTFOLIO_LIST_ERROR_KEY, '3'); // 최대 재시도 설정
-				// 체크 함수를 강제로 실행
-				const checkRetryStatus = () => {
-					const attempts = Number.parseInt(sessionStorage.getItem(PORTFOLIO_LIST_ERROR_KEY) || '0', 10);
-					if (attempts >= MAX_REFRESH_ATTEMPTS) {
-						setShowRetryModal(true);
-						console.log('✅ Retry modal should be visible now');
-					}
-				};
-				checkRetryStatus();
-			};
-			console.log('🧪 테스트 함수 등록됨: window.testRetryModal() 실행해서 새로고침 버튼 테스트 가능');
-		}
-		
-		const handlePageshow = (e: PageTransitionEvent) => {
-			console.log('📱 Pageshow event:', {
-				persisted: e.persisted,
-				type: e.type,
-				timestamp: new Date().toISOString(),
-				url: window.location.href
-			});
-			
-			if (e.persisted) {
-				console.log('🔄 bfcache 복원 감지! 자동 새로고침으로 이미지 문제 해결');
-				// 간단하고 확실한 해결: bfcache 복원 시 무조건 새로고침
-				// 복잡한 조건 체크 없이 1초 후 자동 새로고침
-				setTimeout(() => {
-					console.log('🚀 자동 새로고침 실행 (bfcache 이미지 문제 해결)');
-					window.location.reload();
-				}, 1000);
-			}
-		};
-		
-		const handleVisibilityChange = () => {
-			console.log('👁️ Visibility change:', {
-				state: document.visibilityState,
-				timestamp: new Date().toISOString(),
-				url: window.location.href
-			});
-		};
-		
-		window.addEventListener('pageshow', handlePageshow);
-		document.addEventListener('visibilitychange', handleVisibilityChange);
-		
-		return () => {
-			window.removeEventListener('pageshow', handlePageshow);
-			document.removeEventListener('visibilitychange', handleVisibilityChange);
-		};
-	}, []);
-
-	// 최대 재시도 도달 여부 확인 및 모달 표시
-	useEffect(() => {
-		if (typeof window === 'undefined') return;
-		
-		const checkRetryStatus = () => {
-			const attempts = Number.parseInt(sessionStorage.getItem(PORTFOLIO_LIST_ERROR_KEY) || '0', 10);
-			if (attempts >= MAX_REFRESH_ATTEMPTS) {
-				setShowRetryModal(true);
-			}
-		};
-
-		// 초기 확인
-		checkRetryStatus();
-
-		// 주기적으로 확인 (재시도가 진행 중일 수 있으므로)
-		const interval = setInterval(checkRetryStatus, 500);
-		
-		return () => clearInterval(interval);
-	}, []);
-
 
 	// 화면 크기에 따라 페이지당 아이템 수 결정
 	useEffect(() => {
@@ -123,6 +39,7 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 			setItemsPerPage((prev) => (prev === next ? prev : next));
 		};
 		updateItemsPerPage();
+		setPerPageReady(true); // 실제 화면 기준값으로 확정됨
 		window.addEventListener('resize', updateItemsPerPage);
 		return () => window.removeEventListener('resize', updateItemsPerPage);
 	}, []);
@@ -159,10 +76,9 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 	// 필터링 (진료과목만, OR 조건)
 	const filteredItems = useMemo(() => {
 		if (selectedDepartments.length === 0) return items;
-		
+
 		return items.filter(item => {
-			// OR 조건: 선택한 진료과목 중 하나라도 있으면 표시
-			return selectedDepartments.some(dept => 
+			return selectedDepartments.some(dept =>
 				item.departments?.includes(dept)
 			);
 		});
@@ -170,93 +86,53 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 
 	const totalPages = Math.max(1, Math.ceil(filteredItems.length / itemsPerPage));
 
-	// URL 업데이트 함수 (함수 내부에서 searchParams 직접 읽기)
+	// URL 업데이트 함수
 	const updateURL = (updates: {
 		departments?: string[];
 		page?: number;
 	}) => {
 		const params = new URLSearchParams();
-		
-		// 현재 URL에서 직접 읽기 (클로저 문제 해결)
+
 		const currentDepartments = searchParams.get('departments')?.split(',').filter(Boolean) || [];
 		const currentPageNum = Number.parseInt(searchParams.get('page') || '1', 10);
-		
-		const finalDepartments = updates.departments !== undefined 
-			? updates.departments 
+
+		const finalDepartments = updates.departments !== undefined
+			? updates.departments
 			: currentDepartments;
 		const finalPage = updates.page !== undefined ? updates.page : currentPageNum;
-		
+
 		if (finalDepartments.length > 0) {
 			params.set('departments', finalDepartments.join(','));
 		}
 		if (finalPage > 1) {
 			params.set('page', finalPage.toString());
 		}
-		
+
 		router.replace(params.toString() ? `?${params.toString()}` : '?', { scroll: false });
 	};
 
 	// 현재 페이지가 총 페이지 수를 넘으면 보정
+	// 단, itemsPerPage가 실제 화면 크기로 확정된 뒤에만 (확정 전 기본값 9로 계산된 totalPages로 보정하면
+	//  모바일에서 6·7페이지가 5페이지로 잘못 튕기는 버그가 생김)
 	useEffect(() => {
-		// refresh 중이면 페이지 보정 완전히 스킵
-		const isRefreshing = typeof window !== 'undefined' && sessionStorage.getItem('isRefreshing') === 'true';
-		if (isRefreshing) return;
-		
-		// refresh가 끝난 후에도 계산이 안정화될 때까지 대기
-		const timer = setTimeout(() => {
-			if (currentPage > totalPages && totalPages > 0) {
-				// 가능한 범위 내 최대 페이지로 이동
-				updateURL({ page: totalPages });
-			}
-		}, 200); // 충분한 시간을 두어 계산이 안정화되도록
-		
-		return () => clearTimeout(timer);
-	}, [totalPages, currentPage]);
-
-	// 페이지 진입 후 5초 동안 대부분의 카드가 스피너/백색 상태라면 강제 새로고침으로 복구
-	useEffect(() => {
-		if (typeof window === 'undefined') return;
-
-		const timeoutId = window.setTimeout(() => {
-			const imgs = Array.from(
-				document.querySelectorAll<HTMLImageElement>('img[data-portfolio-image="true"]')
-			);
-
-			if (imgs.length === 0) return;
-
-			// 스피너이거나, 하얀 박스(이미지 높이 0) 상태를 실패로 간주
-			const failed = imgs.filter((img) => !img.complete || img.naturalHeight === 0);
-			const failRatio = failed.length / imgs.length;
-
-			// 절반 이상이 실패 상태이면 이 페이지는 꼬인 것으로 보고 강제 복구
-			if (failRatio >= 0.5) {
-				console.log('⚠️ 대부분의 이미지가 5초 동안 로드되지 않음. 강제 새로고침 실행');
-				window.location.reload();
-				// 새로고침 대신 모달을 띄우고 싶다면 위 줄을 주석 처리하고 아래를 사용:
-				// setShowRetryModal(true);
-			}
-		}, 5000);
-
-		return () => window.clearTimeout(timeoutId);
-	}, [currentPage]);
+		if (!perPageReady) return;
+		if (currentPage > totalPages && totalPages > 0) {
+			updateURL({ page: totalPages });
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [perPageReady, totalPages, currentPage]);
 
 	// 진료과목 토글
 	const handleDepartmentToggle = (dept: string) => {
 		const newDepartments = selectedDepartments.includes(dept)
 			? selectedDepartments.filter(d => d !== dept)
 			: [...selectedDepartments, dept];
-		
-		// 필터 변경 시 재시도 플래그 초기화
-		sessionStorage.removeItem(PORTFOLIO_LIST_RELOAD_FLAG);
-		
+
 		updateURL({ departments: newDepartments, page: 1 });
 	};
 
 	// 초기화
 	const handleReset = () => {
-		// 필터 리셋 시 플래그도 초기화
-		sessionStorage.removeItem(PORTFOLIO_LIST_RELOAD_FLAG);
-		
 		updateURL({ departments: [], page: 1 });
 		setIsFilterOpen(false);
 	};
@@ -264,10 +140,7 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 	// 페이지 변경
 	const handlePageChange = (page: number) => {
 		if (page < 1 || page > totalPages || page === currentPage) return;
-		
-		// 페이지 변경 시 재시도 플래그 초기화 (새 페이지에서는 다시 재시도 가능)
-		sessionStorage.removeItem(PORTFOLIO_LIST_RELOAD_FLAG);
-		
+
 		updateURL({ page });
 		if (typeof window !== 'undefined') {
 			window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -283,7 +156,7 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 		const maxButtons = 5;
 		const pages: number[] = [];
 		let start = Math.max(1, currentPage - Math.floor(maxButtons / 2));
-		let end = Math.min(totalPages, start + maxButtons - 1);
+		const end = Math.min(totalPages, start + maxButtons - 1);
 		start = Math.max(1, end - maxButtons + 1);
 
 		for (let i = start; i <= end; i += 1) {
@@ -339,7 +212,7 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 					)}
 
 					{isFilterOpen && filterDropdownStyle && (
-						<div 
+						<div
 							ref={filterDropdownRef}
 							className="fixed z-50 w-64 rounded-lg border border-slate-200 bg-white shadow-lg sm:w-auto sm:min-w-[400px] md:min-w-[500px] lg:min-w-[600px] xl:min-w-[700px] 2xl:min-w-[800px]"
 							style={{
@@ -409,7 +282,6 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 			{totalPages > 1 && (
 				<div className="flex flex-col items-center gap-2">
 					<div className="flex items-center gap-1">
-						{/* 이전 페이지 버튼 */}
 						<button
 							type="button"
 							onClick={() => handlePageChange(currentPage - 1)}
@@ -419,7 +291,6 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 							이전
 						</button>
 
-						{/* 페이지 번호 */}
 						{pageNumbers.map((page) => (
 							<button
 								key={page}
@@ -435,7 +306,6 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 							</button>
 						))}
 
-						{/* 다음 페이지 버튼 */}
 						<button
 							type="button"
 							onClick={() => handlePageChange(currentPage + 1)}
@@ -449,31 +319,6 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 					<p className="text-sm text-slate-600">
 						{currentPage} / {totalPages} 페이지
 					</p>
-				</div>
-			)}
-
-			{/* 최대 재시도 도달 시 모달 */}
-			{showRetryModal && (
-				<div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowRetryModal(false)}>
-					<div className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-						<h3 className="mb-4 text-lg font-semibold text-slate-900">URL 갱신 필요</h3>
-						<p className="mb-6 text-sm text-slate-600">
-							이미지 로드를 위해 새로고침 해주세요
-						</p>
-						<button
-							onClick={() => {
-								if (typeof window !== 'undefined') {
-									sessionStorage.removeItem(PORTFOLIO_LIST_ERROR_KEY);
-									sessionStorage.removeItem(PORTFOLIO_LIST_RELOAD_FLAG);
-									sessionStorage.removeItem('isRefreshing');
-								}
-								window.location.reload();
-							}}
-							className="w-full rounded-lg bg-orange-400 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
-						>
-							새로고침
-						</button>
-					</div>
 				</div>
 			)}
 		</div>

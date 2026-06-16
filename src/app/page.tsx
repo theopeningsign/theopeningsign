@@ -1,48 +1,64 @@
 import Link from "next/link";
 import Image from "next/image";
+import fs from "node:fs";
+import path from "node:path";
+import HeroSlideshow from "@/components/HeroSlideshow";
+
+// public/main/ 폴더의 이미지를 자동으로 읽어온다 (파일만 넣고 빼면 끝, 코드 수정 불필요)
+function getHeroImages(): string[] {
+  try {
+    const dir = path.join(process.cwd(), "public", "main");
+    return fs
+      .readdirSync(dir)
+      .filter((f) => /\.(jpe?g|png|webp|avif)$/i.test(f))
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+      .map((f) => `/main/${f}`);
+  } catch {
+    return [];
+  }
+}
 
 export default function Home() {
+  const heroImages = getHeroImages();
+
   return (
     <>
     <Link href="/portfolio" className="block cursor-pointer outline-none focus:outline-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
-    <section className="min-h-[70vh] grid items-center px-4 overflow-hidden">
-      <div className="mx-auto grid w-full max-w-6xl gap-10 md:grid-cols-2">
-        {/* 왼쪽: 로고 (모바일에서 먼저, 데스크톱 좌측) */}
-        <div className="logo-stage">
-          {/* 로고 페이드인 이미지 */}
-          <Image 
-            src="/logo.png" 
-            alt="THE OPENING SIGN" 
+    {/* 전체 너비로 꽉 차게 (max-w-6xl 컨테이너 밖으로 빠져나오는 풀블리드) */}
+    <section
+      className="relative flex min-h-[100svh] flex-col items-center justify-center overflow-hidden px-4 -mt-24 -mb-8"
+      style={{ marginLeft: 'calc(50% - 50vw)', marginRight: 'calc(50% - 50vw)' }}
+    >
+      <HeroSlideshow images={heroImages} />
+      {/* 가운데 정렬 단일 컬럼 — 정돈된 고급 레이아웃 */}
+      <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center px-6 text-center">
+        <p className="text-lg sm:text-xl font-semibold uppercase tracking-[0.28em] text-white/90">
+          Hospital Signage <span className="whitespace-nowrap">Professional Team</span>
+        </p>
+        {/* 구분선 제거 — 색만 빼고 빈 spacer로 둬서 기존 여백/간격은 유지 */}
+        <div className="mt-5 mx-auto h-px w-12" />
+        <p className="mt-6 max-w-xl text-pretty break-keep text-[15px] leading-8 text-white/85 sm:text-base">
+          국내 1위 간판 전문 서비스 <span className="font-semibold text-white">『간판의품격』</span>에서 다양한 병의원 프로젝트 경험을 바탕으로 탄생한 <span className="whitespace-nowrap">병의원 사이니지 전문팀입니다.</span>
+        </p>
+        <p className="mt-3 max-w-xl text-pretty break-keep text-[15px] leading-8 text-white/75 sm:text-base">
+          디테일을 중시하며, 디자인의 힘으로 <span className="whitespace-nowrap">차별화된 결과를 만들어냅니다.</span>
+        </p>
+        {/* 로고 (흰색, 글자 아래) — 필터는 고정 wrapper에, 페이드는 이미지에 분리.
+            (모바일 WebKit에서 필터+애니메이션을 같은 요소에 걸면 검정→흰색으로 튀는 현상 방지)
+            원래 주황으로 되돌리려면 wrapper의 filter만 빼면 됨 */}
+        <div className="mt-[3.75rem] [filter:brightness(0)_invert(1)_drop-shadow(0_4px_20px_rgba(0,0,0,0.45))]">
+          <Image
+            src="/logo.png"
+            alt="THE OPENING SIGN"
             width={520}
             height={520}
-            className="relative z-10 w-[min(80vw,520px)] h-auto logo-fade-in"
+            className="logo-fade-in h-auto w-[min(90vw,510px)]"
             priority
           />
-          {/* 반짝임 효과 제거 (로고만 페이드인) */}
-        </div>
-        {/* 오른쪽: 문구 (모바일에서는 로고 아래로) */}
-        <div className="order-1 md:order-none flex flex-col gap-4 md:self-center md:pl-8 max-w-prose text-pretty break-keep">
-          <h1 className="text-xl font-extrabold tracking-wide text-balance" style={{ color: '#ED6A26' }}>HOSPITAL SIGNAGE PROFESSIONAL TEAM</h1>
-          <p className="text-base leading-7 text-slate-700 text-pretty break-keep">
-            저희는 국내 1위 간판 전문 서비스 <span className="quote-highlight-double">간판의품격</span>에서 다양한 병의원 프로젝트 경험을 바탕으로 탄생한 병의원 사이니지 전문팀입니다.
-          </p>
-          <p className="text-base leading-7 text-slate-700 text-pretty break-keep">
-            병의원 사이니지 전문 경력을 지닌 2030으로 구성된 젊은 팀으로써 디테일을 중시하며, 디자인의 힘으로 차별화된 결과를 만들어냅니다.
-          </p>
         </div>
       </div>
     </section>
     </Link>
-    {/* 하단 중앙 포트폴리오 보러가기 버튼 (모바일 겹침 방지: 음수 마진 제거) */}
-    <div className="flex justify-center py-6 mt-2 md:mt-0">
-      <Link
-        href="/portfolio"
-        className="rounded-lg px-6 py-3 font-semibold text-white shadow-sm transition-colors"
-        style={{ backgroundColor: '#D45720' }}
-      >
-        포트폴리오 보러가기
-      </Link>
-    </div>
     </>
   );
 }

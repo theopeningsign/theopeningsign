@@ -100,35 +100,6 @@ function normalizeImageUrl(url: string | undefined): string | undefined {
 	}
 }
 
-// 파일 속성에서 첫 번째 파일 URL을 추출 (더 robust한 처리)
-function extractFirstFileUrl(files: any): string | undefined {
-	if (!files || !Array.isArray(files) || files.length === 0) return undefined;
-	const first = files[0];
-	if (!first) return undefined;
-	
-	let url: string | undefined;
-	
-	// 다양한 Notion 파일 형식 지원
-	if (first?.file?.url) url = first.file.url;
-	else if (first?.external?.url) url = first.external.url;
-	// name 속성에 URL이 있는 경우 (일부 Notion 버전)
-	else if (first?.name && typeof first.name === 'string' && first.name.startsWith('http')) url = first.name;
-	// 직접 URL 문자열인 경우
-	else if (typeof first === 'string' && first.startsWith('http')) url = first;
-	
-	// URL 정규화
-	if (url) {
-		return normalizeImageUrl(url);
-	}
-	
-	// 디버깅: 예상치 못한 형식 로그
-	if (process.env.NODE_ENV === 'development') {
-		console.warn('[Notion] 예상치 못한 파일 형식:', JSON.stringify(first, null, 2));
-	}
-	
-	return undefined;
-}
-
 // 파일 속성에서 모든 파일 URL을 추출 (더 robust한 처리)
 function extractAllFileUrls(files: any): string[] {
 	if (!files || !Array.isArray(files)) return [];
@@ -149,6 +120,64 @@ function extractAllFileUrls(files: any): string[] {
 			return url ? normalizeImageUrl(url) : undefined;
 		})
 		.filter(Boolean) as string[];
+}
+
+// ───────────────────────────────────────────────────────────────────
+// 이미지 프록시 (Notion S3 서명 URL 만료 문제 해결)
+// 클라이언트에는 만료되는 S3 URL 대신 안 죽는 내부 경로(/api/img/...)를 전달한다.
+// 프록시 라우트가 요청 시점에 Notion에서 싱싱한 URL을 받아 307 리다이렉트한다.
+// ───────────────────────────────────────────────────────────────────
+
+export type ImageKind = 'cover' | 'add';
+
+// 메인 이미지(여러 속성명 호환) files 추출
+function getCoverFiles(props: any): any {
+	return props?.['메인이미지']?.files
+		?? props?.['메인 이미지']?.files
+		?? props?.['대표이미지']?.files
+		?? props?.['대표 이미지']?.files
+		?? props?.['Cover']?.files
+		?? props?.['cover']?.files
+		?? props?.['이미지']?.files
+		?? props?.['Image']?.files;
+}
+
+// 보조/추가 이미지 files 추출
+function getAdditionalFiles(props: any): any {
+	return props?.['보조이미지']?.files
+		?? props?.['추가이미지']?.files;
+}
+
+// 프록시 경로 생성 (상대 경로 → metadataBase가 OG에서 절대경로로 변환)
+export function buildImageProxyPath(pageId: string, kind: ImageKind, index: number): string {
+	return `/api/img/${encodeURIComponent(pageId)}/${kind}/${index}`;
+}
+
+// 내부 프록시 URL인지 확인 (Next/Image 최적화 비활성화 판단용)
+export function isProxyImageUrl(url: string | undefined): boolean {
+	if (!url) return false;
+	return url.includes('/api/img/');
+}
+
+// 프록시 라우트에서 사용: pageId+종류+index로 현재(싱싱한) 원본 이미지 URL을 해석
+export async function resolveNotionImageUrl(pageId: string, kind: ImageKind, index: number): Promise<string | null> {
+	const normalized = normalizeTo32Hex(pageId);
+	if (!normalized) return null;
+	const hyphenated = `${normalized.slice(0, 8)}-${normalized.slice(8, 12)}-${normalized.slice(12, 16)}-${normalized.slice(16, 20)}-${normalized.slice(20)}`;
+	try {
+		const page = await notionRetrievePage(hyphenated);
+		const props = page?.properties;
+		if (!props) return null;
+		const files = kind === 'cover' ? getCoverFiles(props) : getAdditionalFiles(props);
+		const urls = extractAllFileUrls(files);
+		if (index < 0 || index >= urls.length) return null;
+		return urls[index] ?? null;
+	} catch (e) {
+		if (process.env.NODE_ENV === 'development') {
+			console.warn('[Notion] resolveNotionImageUrl 실패', e);
+		}
+		return null;
+	}
 }
 
 // 페이지를 PortfolioItem으로 매핑
@@ -178,29 +207,19 @@ function mapPageToPortfolioItem(page: any): PortfolioItem | null {
     const completedAt: string | undefined = props?.['시공완료']?.date?.start ?? undefined;
     // 진료과목 (Multi-select) - 다른 필드들과 동시에 불러옴
     const departments: string[] | undefined = props?.['진료과목']?.multi_select?.map((s: any) => s?.name).filter(Boolean);
-    // 모든 가능한 이미지 속성명 체크
-    const coverFiles = props?.['메인이미지']?.files
-        ?? props?.['메인 이미지']?.files
-        ?? props?.['대표이미지']?.files
-        ?? props?.['대표 이미지']?.files
-        ?? props?.['Cover']?.files
-        ?? props?.['cover']?.files
-        ?? props?.['이미지']?.files
-        ?? props?.['Image']?.files;
-    
-    const coverImageUrl: string | undefined = extractFirstFileUrl(coverFiles);
-    const coverImageUrls: string[] = extractAllFileUrls(coverFiles);
-    
+    // 모든 가능한 이미지 속성명 체크 → 개수만 파악하고, 클라이언트엔 프록시 경로를 전달
+    const rawCoverUrls: string[] = extractAllFileUrls(getCoverFiles(props));
+    const rawAdditionalUrls: string[] = extractAllFileUrls(getAdditionalFiles(props));
+
     // 디버깅: 이미지가 없는 경우 (개발 환경에서만 간단한 로그)
-    if (!coverImageUrl && process.env.NODE_ENV === 'development') {
+    if (rawCoverUrls.length === 0 && process.env.NODE_ENV === 'development') {
         console.warn(`[Notion] 이미지를 찾을 수 없음 - 제목: ${title}, ID: ${page.id}`);
     }
-    const additionalImageUrls: string[] = extractAllFileUrls(
-        // 실제 워크스페이스에서는 '보조이미지' 명칭 사용
-        props?.['보조이미지']?.files
-        // 과거 프롬프트/스키마에서는 '추가이미지'로 사용
-        ?? props?.['추가이미지']?.files
-    );
+
+    // 만료되는 S3 URL 대신 안 죽는 프록시 경로로 변환
+    const coverImageUrls: string[] = rawCoverUrls.map((_, i) => buildImageProxyPath(page.id, 'cover', i));
+    const coverImageUrl: string | undefined = coverImageUrls[0];
+    const additionalImageUrls: string[] = rawAdditionalUrls.map((_, i) => buildImageProxyPath(page.id, 'add', i));
     const description: string | undefined = props?.['설명']?.rich_text?.map((t: any) => t?.plain_text).join('\n') || undefined;
 	const createdTime: string | undefined = (props?.['작성일']?.created_time as string) || (page as any).created_time;
 

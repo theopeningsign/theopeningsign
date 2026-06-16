@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import Image from 'next/image';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { isNotionImageUrl } from '@/lib/notion';
+import { isNotionImageUrl, isProxyImageUrl } from '@/lib/notion';
 
 interface Props {
 	images: string[];
@@ -428,7 +428,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 								className="object-contain pointer-events-none opacity-50"
 								priority
 								draggable={false}
-								unoptimized={prevImage ? isNotionImageUrl(prevImage) : false} // Notion 이미지만 최적화 비활성화 (Vercel Cache Writes 초과 방지)
+								unoptimized={prevImage ? (isProxyImageUrl(prevImage) || isNotionImageUrl(prevImage)) : false} // 프록시/Notion 이미지는 최적화 비활성화
 							/>
 						)}
 						{/* 현재 이미지 */}
@@ -439,7 +439,7 @@ export default function Lightbox({ images, initialIndex = 0, onClose }: Props) {
 							className={`object-contain pointer-events-none transition-opacity duration-200 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
 							priority
 							draggable={false}
-							unoptimized={current ? isNotionImageUrl(current) : false} // Notion 이미지만 최적화 비활성화 (Vercel Cache Writes 초과 방지)
+							unoptimized={current ? (isProxyImageUrl(current) || isNotionImageUrl(current)) : false} // 프록시/Notion 이미지는 최적화 비활성화
 							onLoad={() => setImgLoaded(true)}
 							onError={() => setImgLoaded(true)} // 에러가 나도 로딩 상태 해제
 						/>
