@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ScrollRestoration from "@/components/ScrollRestoration";
+import WishlistFloating from "@/components/WishlistFloating";
 
 const notoSans = Noto_Sans_KR({
   variable: "--font-noto-sans-kr",
@@ -70,6 +71,7 @@ export default function RootLayout({
         <Header />
         <main className="mx-auto min-h-[70vh] max-w-6xl px-4 py-8">{children}</main>
         <Footer />
+        <WishlistFloating />
       </body>
     </html>
   );

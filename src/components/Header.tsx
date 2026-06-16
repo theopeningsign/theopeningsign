@@ -49,6 +49,7 @@ export default function Header() {
 					<Link href="/" onClick={handleNavClick} className={linkClass}>Home</Link>
 					<Link href="/portfolio" onClick={handleNavClick} className={linkClass}>Portfolio</Link>
 					<Link href="/about" onClick={handleNavClick} className={linkClass}>About us</Link>
+					<Link href="/contact" onClick={handleNavClick} className={linkClass}>상담신청</Link>
 				</nav>
 			</div>
 		</header>

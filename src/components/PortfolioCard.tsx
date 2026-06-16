@@ -1,11 +1,13 @@
 // 포트폴리오 카드 컴포넌트
 "use client";
 
-import { useState, useRef, memo } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Heart } from 'lucide-react';
 import { PortfolioItem } from '@/lib/types';
 import { isNotionImageUrl, isProxyImageUrl } from '@/lib/notion';
+import { isInWishlist, toggleWishlist, WISHLIST_EVENT } from '@/lib/wishlist';
 
 interface Props {
 	item: PortfolioItem;
@@ -21,6 +23,26 @@ function PortfolioCard({ item, priority = false, currentPage = 1 }: Props) {
 	const [imgLoading, setImgLoading] = useState(true);
 	const [retry, setRetry] = useState(0);
 	const retryRef = useRef(0);
+	const [saved, setSaved] = useState(false);
+
+	// 담기 상태 동기화
+	useEffect(() => {
+		const sync = () => setSaved(isInWishlist(item.id));
+		sync();
+		window.addEventListener(WISHLIST_EVENT, sync);
+		window.addEventListener('storage', sync);
+		return () => {
+			window.removeEventListener(WISHLIST_EVENT, sync);
+			window.removeEventListener('storage', sync);
+		};
+	}, [item.id]);
+
+	const handleSave = (e: React.MouseEvent) => {
+		// 카드 링크 이동 막고 담기만 처리
+		e.preventDefault();
+		e.stopPropagation();
+		toggleWishlist({ id: item.id, title: item.title });
+	};
 
 	const baseSrc = item.coverImageUrl || '/placeholder.svg';
 	// 재시도 시에만 캐시버스터 추가 (정상 로드 시 URL 안정적 → 불필요한 재요청 없음)
@@ -88,6 +110,15 @@ function PortfolioCard({ item, priority = false, currentPage = 1 }: Props) {
 					loading={priority ? undefined : 'lazy'}
 					sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
 				/>
+				{/* 담기(♡) 버튼 */}
+				<button
+					type="button"
+					onClick={handleSave}
+					aria-label={saved ? '상담 목록에서 빼기' : '상담 목록에 담기'}
+					className="absolute right-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/35 backdrop-blur-sm transition hover:bg-black/55 active:scale-90"
+				>
+					<Heart size={18} className={saved ? 'fill-[#ED6A26] text-[#ED6A26]' : 'text-white'} />
+				</button>
 				<div className="absolute inset-0 bg-slate-900/0 transition-colors group-hover:bg-slate-900/20" />
 				<div className="absolute inset-x-0 bottom-0 translate-y-2 px-3 pb-3 opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100">
 					<div className="inline-block rounded bg-black/70 px-2 py-1 text-xs text-white">{item.title}</div>
