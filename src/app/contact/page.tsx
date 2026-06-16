@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import ConsultationForm from '@/components/ConsultationForm';
+import ScrollTopOnMount from '@/components/ScrollTopOnMount';
 
 export const metadata: Metadata = {
 	title: '상담신청 | 더오프닝사인 THE OPENING SIGN',
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
 export default function ContactPage() {
 	return (
 		<div className="mx-auto max-w-2xl">
+			<ScrollTopOnMount />
 			{/* 헤더 */}
 			<div className="text-center">
 				<h1 className="text-3xl font-extrabold text-slate-900">상담신청</h1>
