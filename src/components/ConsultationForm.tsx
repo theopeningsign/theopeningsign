@@ -60,7 +60,7 @@ export default function ConsultationForm() {
 			<div className="rounded-2xl border border-orange-100 bg-orange-50/60 p-10 text-center">
 				<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#ED6A26] text-2xl text-white">✓</div>
 				<h2 className="text-xl font-bold text-slate-900">상담신청이 접수되었습니다</h2>
-				<p className="mt-2 text-slate-600">빠른 시일 내에 연락드리겠습니다. 감사합니다.</p>
+				<p className="mt-2 text-slate-600">빠른 시일 내에 연락드리겠습니다.<br />감사합니다.</p>
 				<button
 					type="button"
 					onClick={() => setSubmitted(false)}

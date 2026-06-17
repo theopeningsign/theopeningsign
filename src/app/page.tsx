@@ -38,10 +38,10 @@ export default function Home() {
         {/* 구분선 제거 — 색만 빼고 빈 spacer로 둬서 기존 여백/간격은 유지 */}
         <div className="mt-5 mx-auto h-px w-12" />
         <p className="mt-6 max-w-xl text-pretty break-keep text-[15px] leading-8 text-white/85 sm:text-base">
-          국내 1위 간판 전문 서비스 <span className="font-semibold text-white">『간판의품격』</span>에서 다양한 병의원 프로젝트 경험을 바탕으로 탄생한 <span className="whitespace-nowrap">병의원 사이니지 전문팀입니다.</span>
+          <span className="font-semibold text-white">『간판의품격』</span>에서 만든<br /><span className="whitespace-nowrap">메디컬 사인 전문팀입니다</span>
         </p>
         <p className="mt-3 max-w-xl text-pretty break-keep text-[15px] leading-8 text-white/75 sm:text-base">
-          디테일을 중시하며, 디자인의 힘으로 <span className="whitespace-nowrap">차별화된 결과를 만들어냅니다.</span>
+          디테일을 중시하며, 디자인의 힘으로<br /><span className="whitespace-nowrap">차별화된 결과를 만들어냅니다</span>
         </p>
         {/* 로고 (흰색, 글자 아래) — 필터는 고정 wrapper에, 페이드는 이미지에 분리.
             (모바일 WebKit에서 필터+애니메이션을 같은 요소에 걸면 검정→흰색으로 튀는 현상 방지)
