@@ -50,8 +50,8 @@ export default function Home() {
           <Image
             src="/logo.png"
             alt="THE OPENING SIGN"
-            width={520}
-            height={520}
+            width={1156}
+            height={683}
             className="logo-fade-in h-auto w-[min(90vw,510px)]"
             priority
           />
