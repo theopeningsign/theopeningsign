@@ -21,7 +21,7 @@ export async function GET(
 ) {
 	const { slug } = await params;
 
-	// slug = [pageId, kind, index]
+	// slug = [pageId, kind, index] (+ 선택적 4번째 = 버전 토큰: 캐시 무효화 키일 뿐, 여기선 무시)
 	if (!Array.isArray(slug) || slug.length < 3) {
 		return new NextResponse('Bad request', { status: 400 });
 	}

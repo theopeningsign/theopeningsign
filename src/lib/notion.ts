@@ -149,8 +149,13 @@ function getAdditionalFiles(props: any): any {
 }
 
 // 프록시 경로 생성 (상대 경로 → metadataBase가 OG에서 절대경로로 변환)
-export function buildImageProxyPath(pageId: string, kind: ImageKind, index: number): string {
-	return `/api/img/${encodeURIComponent(pageId)}/${kind}/${index}`;
+// version: 노션 수정시각 토큰. 경로 끝에 붙여 캐시 무효화 키로만 쓴다(라우트는 이 조각을 무시).
+//   - 노션에서 이미지 순서변경/교체/추가 시 수정시각이 바뀜 → 주소가 달라짐 → CDN/브라우저 캐시 자동 갱신.
+//   - 페이지 데이터는 revalidate=60(ISR)로 1분마다 새로 렌더 → 새 버전 주소가 자동 반영됨(수동 작업 불필요).
+//   - 쿼리스트링(?v=)은 Next16에서 막혀서 경로 세그먼트로 처리.
+export function buildImageProxyPath(pageId: string, kind: ImageKind, index: number, version?: string): string {
+	const base = `/api/img/${encodeURIComponent(pageId)}/${kind}/${index}`;
+	return version ? `${base}/${encodeURIComponent(version)}` : base;
 }
 
 // 내부 프록시 URL인지 확인 (Next/Image 최적화 비활성화 판단용)
@@ -216,10 +221,13 @@ function mapPageToPortfolioItem(page: any): PortfolioItem | null {
         console.warn(`[Notion] 이미지를 찾을 수 없음 - 제목: ${title}, ID: ${page.id}`);
     }
 
+    // 노션 수정시각을 캐시 버전 토큰으로 사용 (순서변경/교체 시에도 주소가 바뀌어 캐시 자동 갱신)
+    const editedToken: string | undefined = String((page as any).last_edited_time || '').replace(/\D/g, '') || undefined;
+
     // 만료되는 S3 URL 대신 안 죽는 프록시 경로로 변환
-    const coverImageUrls: string[] = rawCoverUrls.map((_, i) => buildImageProxyPath(page.id, 'cover', i));
+    const coverImageUrls: string[] = rawCoverUrls.map((_, i) => buildImageProxyPath(page.id, 'cover', i, editedToken));
     const coverImageUrl: string | undefined = coverImageUrls[0];
-    const additionalImageUrls: string[] = rawAdditionalUrls.map((_, i) => buildImageProxyPath(page.id, 'add', i));
+    const additionalImageUrls: string[] = rawAdditionalUrls.map((_, i) => buildImageProxyPath(page.id, 'add', i, editedToken));
     const description: string | undefined = props?.['설명']?.rich_text?.map((t: any) => t?.plain_text).join('\n') || undefined;
 	const createdTime: string | undefined = (props?.['작성일']?.created_time as string) || (page as any).created_time;
 
