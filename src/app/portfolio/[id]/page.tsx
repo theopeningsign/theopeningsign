@@ -108,6 +108,7 @@ export async function generateMetadata({ params }: MetadataProps): Promise<Metad
     title,
     description,
     keywords,
+    alternates: { canonical: `/portfolio/${encodeURIComponent(item.id)}` },
     openGraph: {
       title,
       description,

@@ -7,17 +7,17 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
+        allow: ['/', '/api/img/'],
         disallow: ['/api/'],
       },
       {
         userAgent: 'Googlebot',
-        allow: '/',
+        allow: ['/', '/api/img/'],
         disallow: ['/api/'],
       },
       {
         userAgent: 'Yeti',
-        allow: '/',
+        allow: ['/', '/api/img/'],
         disallow: ['/api/'],
       },
     ],

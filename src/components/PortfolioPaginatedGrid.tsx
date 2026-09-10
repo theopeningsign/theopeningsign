@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import PortfolioGrid from '@/components/PortfolioGrid';
 import type { PortfolioItem } from '@/lib/types';
 
@@ -135,6 +136,15 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 	const handleReset = () => {
 		updateURL({ departments: [], page: 1 });
 		setIsFilterOpen(false);
+	};
+
+	// 페이지 링크 href (검색엔진이 따라갈 수 있도록 실제 주소 제공)
+	const pageHref = (page: number) => {
+		const params = new URLSearchParams();
+		if (selectedDepartments.length > 0) params.set('departments', selectedDepartments.join(','));
+		if (page > 1) params.set('page', page.toString());
+		const qs = params.toString();
+		return qs ? `/portfolio?${qs}` : '/portfolio';
 	};
 
 	// 페이지 변경
@@ -282,20 +292,28 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 			{totalPages > 1 && (
 				<div className="flex flex-col items-center gap-2">
 					<div className="flex items-center gap-1">
-						<button
-							type="button"
-							onClick={() => handlePageChange(currentPage - 1)}
-							disabled={currentPage === 1}
-							className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-						>
-							이전
-						</button>
+						{currentPage === 1 ? (
+							<span aria-disabled="true" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 cursor-not-allowed opacity-50">
+								이전
+							</span>
+						) : (
+							<Link
+								href={pageHref(currentPage - 1)}
+								prefetch={false}
+								onClick={(e) => { e.preventDefault(); handlePageChange(currentPage - 1); }}
+								className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							>
+								이전
+							</Link>
+						)}
 
 						{pageNumbers.map((page) => (
-							<button
+							<Link
 								key={page}
-								type="button"
-								onClick={() => handlePageChange(page)}
+								href={pageHref(page)}
+								prefetch={false}
+								aria-current={page === currentPage ? 'page' : undefined}
+								onClick={(e) => { e.preventDefault(); handlePageChange(page); }}
 								className={`rounded-lg border px-3 py-2 text-sm font-medium ${
 									page === currentPage
 										? 'border-orange-500 bg-orange-500 text-white'
@@ -303,17 +321,23 @@ export default function PortfolioPaginatedGrid({ items }: Props) {
 								}`}
 							>
 								{page}
-							</button>
+							</Link>
 						))}
 
-						<button
-							type="button"
-							onClick={() => handlePageChange(currentPage + 1)}
-							disabled={currentPage === totalPages}
-							className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-						>
-							다음
-						</button>
+						{currentPage === totalPages ? (
+							<span aria-disabled="true" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 cursor-not-allowed opacity-50">
+								다음
+							</span>
+						) : (
+							<Link
+								href={pageHref(currentPage + 1)}
+								prefetch={false}
+								onClick={(e) => { e.preventDefault(); handlePageChange(currentPage + 1); }}
+								className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							>
+								다음
+							</Link>
+						)}
 					</div>
 
 					<p className="text-sm text-slate-600">
