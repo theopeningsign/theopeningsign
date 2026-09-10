@@ -101,7 +101,10 @@ export async function generateMetadata({ params }: MetadataProps): Promise<Metad
     title: '포트폴리오 상세 | 더오프닝사인 THE OPENING SIGN',
     description: '더오프닝사인 THE OPENING SIGN의 병원 간판 시공 포트폴리오',
   };
-  const title = `${item.title} | 더오프닝사인 THE OPENING SIGN 포트폴리오`;
+  // 검색결과/탭 제목(화면 h1과 별개, 보이지 않음): 병원명 + 간판 시공 + 지역·진료과목
+  const titleDept = item.departments && item.departments.length > 0 ? item.departments[0] : '';
+  const titleRegion = [item.location, titleDept].filter(Boolean).join(' ');
+  const title = `${item.title} 간판 시공${titleRegion ? ` - ${titleRegion}` : ''} | 더오프닝사인 THE OPENING SIGN`;
   const description = `${item.title} ${item.location ? `- ${item.location}` : ''} ${item.type ? `| ${item.type}` : ''} ${item.completedAt ? (() => { try { const parts = item.completedAt.split('-'); if (parts.length >= 2 && parts[0] && parts[1]) { const [y, m] = parts; return `${y}년 ${Number(m)}월 시공`; } } catch {} return ''; })() : ''} | 더오프닝사인 THE OPENING SIGN의 병원 간판 시공 포트폴리오`.trim();
   const keywords = ["더오프닝사인", "THE OPENING SIGN", item.title, item.location, item.type, "병원 간판", "병원 간판 시공"].filter((k): k is string => Boolean(k));
   return {
