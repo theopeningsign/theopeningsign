@@ -9,6 +9,7 @@ interface Props {
 	images: string[]; // 보조 이미지들
 	covers?: string[]; // 메인 이미지들 (여러 장)
 	cover?: string; // 단일 메인 이미지
+	title?: string; // 병원명 (이미지 alt용)
 }
 
 const MAX_IMG_RETRY = 2;
@@ -56,7 +57,7 @@ const GalleryImageItem = memo(function GalleryImageItem({ src, alt, priority = f
 	prevProps.priority === nextProps.priority
 );
 
-export default function Gallery({ images, covers, cover }: Props) {
+export default function Gallery({ images, covers, cover, title }: Props) {
 	const [open, setOpen] = useState(false);
 	const [index, setIndex] = useState(0);
 
@@ -85,7 +86,7 @@ export default function Gallery({ images, covers, cover }: Props) {
 						<button key={i} className="group relative aspect-[4/3] overflow-hidden rounded-lg border" onClick={() => handleImageClick(i)}>
 							<GalleryImageItem
 								src={src || '/placeholder.svg'}
-								alt={`추가 이미지 ${i + 1}`}
+								alt={title ? `${title} 간판 시공 사진 ${i + 1}` : `추가 이미지 ${i + 1}`}
 								priority={priority}
 							/>
 						</button>
