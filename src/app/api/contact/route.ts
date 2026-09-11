@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { buildPortfolioSlug } from '@/lib/notion';
 
 const TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'biz@ganpoom.com';
 // Gmail SMTP(앱 비밀번호) 발신 계정. 메일은 이 계정으로 나가고 표시는 "더오프닝사인 상담신청".
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
 	const wishlist: WishItem[] = Array.isArray(body.wishlist) ? (body.wishlist as WishItem[]) : [];
 	const wishHtml = wishlist.length
 		? `<ul style="margin:0;padding-left:18px">${wishlist
-			.map((w) => `<li><a href="${SITE_URL}/portfolio/${encodeURIComponent(w.id)}">${esc(w.title)}</a></li>`)
+			.map((w) => `<li><a href="${SITE_URL}/portfolio/${encodeURIComponent(buildPortfolioSlug(w.title, w.id))}">${esc(w.title)}</a></li>`)
 			.join('')}</ul>`
 		: '<span style="color:#888">없음</span>';
 

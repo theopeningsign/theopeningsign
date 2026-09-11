@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next';
-import { getPortfolios } from '@/lib/notion';
+import { getPortfolios, buildPortfolioSlug } from '@/lib/notion';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.SITE_URL || 'https://theopeningsign.vercel.app';
@@ -30,7 +30,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const portfolios = await getPortfolios();
     const portfolioRoutes: MetadataRoute.Sitemap = portfolios.map((item) => ({
-      url: `${baseUrl}/portfolio/${encodeURIComponent(item.id)}`,
+      url: `${baseUrl}/portfolio/${encodeURIComponent(buildPortfolioSlug(item.title, item.id))}`,
       lastModified: item.completedAt ? new Date(item.completedAt) : new Date(),
       changeFrequency: 'monthly' as const,
       priority: 0.7,

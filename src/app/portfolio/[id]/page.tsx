@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getPortfolios, getPortfolioById } from '@/lib/notion';
+import { getPortfolios, getPortfolioById, buildPortfolioSlug } from '@/lib/notion';
 import Gallery from '@/components/Gallery';
 import type { Metadata } from 'next';
 import HeroLightbox from '@/components/HeroLightbox';
@@ -111,7 +111,7 @@ export async function generateMetadata({ params }: MetadataProps): Promise<Metad
     title,
     description,
     keywords,
-    alternates: { canonical: `/portfolio/${encodeURIComponent(item.id)}` },
+    alternates: { canonical: `/portfolio/${encodeURIComponent(buildPortfolioSlug(item.title, item.id))}` },
     openGraph: {
       title,
       description,

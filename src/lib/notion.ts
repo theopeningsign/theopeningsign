@@ -158,6 +158,22 @@ export function buildImageProxyPath(pageId: string, kind: ImageKind, index: numb
 	return version ? `${base}/${encodeURIComponent(version)}` : base;
 }
 
+// 상세 페이지 URL 슬러그: "{병원명}-간판--{32자리ID}"
+//   - 사람/검색엔진이 읽을 수 있는 병원명을 앞에 붙이고, 실제 조회 키인 32자리 ID는 항상 맨 뒤에 둔다.
+//   - getPortfolioById는 문자열 끝의 16진수 32자리만 ID로 해석하므로, 앞의 슬러그가 무엇이든 안전하다.
+//   - 순수 ID URL(슬러그 없음)도 그대로 계속 동작한다(하위호환).
+export function buildPortfolioSlug(title: string | undefined, id: string): string {
+	const normId = String(id).replace(/[^0-9a-fA-F]/g, '').slice(-32);
+	const namePart = (title || '')
+		.trim()
+		.replace(/\s+/g, '-')
+		.replace(/[\/\\?#%&:]/g, '')
+		.replace(/-+/g, '-')
+		.replace(/^-+|-+$/g, '');
+	const label = namePart ? `${namePart}-간판` : '간판';
+	return `${label}--${normId}`;
+}
+
 // 내부 프록시 URL인지 확인 (Next/Image 최적화 비활성화 판단용)
 export function isProxyImageUrl(url: string | undefined): boolean {
 	if (!url) return false;

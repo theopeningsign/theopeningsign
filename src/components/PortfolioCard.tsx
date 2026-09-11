@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Heart } from 'lucide-react';
 import { PortfolioItem } from '@/lib/types';
-import { isNotionImageUrl, isProxyImageUrl } from '@/lib/notion';
+import { isNotionImageUrl, isProxyImageUrl, buildPortfolioSlug } from '@/lib/notion';
 import { isInWishlist, toggleWishlist, WISHLIST_EVENT } from '@/lib/wishlist';
 
 interface Props {
@@ -64,7 +64,7 @@ function PortfolioCard({ item, priority = false, currentPage = 1 }: Props) {
 	};
 
 	// 상세 페이지로는 Notion 원본 page.id를 그대로 전달 (하이픈 포함)
-	const href = item.id ? `/portfolio/${encodeURIComponent(item.id)}` : '#';
+	const href = item.id ? `/portfolio/${encodeURIComponent(buildPortfolioSlug(item.title, item.id))}` : '#';
 
 	// 클릭 시 현재 카드의 위치와 스크롤 위치 저장
 	const handleClick = (e: React.MouseEvent) => {
