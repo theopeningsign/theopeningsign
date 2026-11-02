@@ -21,6 +21,7 @@ export default function PrivacyPage() {
 						<li><b>필수</b>: 담당자 성함, 연락처, 설치 주소</li>
 						<li><b>선택</b>: 이메일</li>
 						<li><b>상담 관련 정보</b>: 병원/상호명, 간판 종류, 철거 여부, 설치 층수, 개원 여부 및 희망 일정, 요청사항, 참고 포트폴리오</li>
+						<li><b>선택</b>: 첨부파일(현장 사진, 참고 이미지, 도면 등 이용자가 직접 첨부한 파일)</li>
 					</ul>
 				</section>
 
@@ -47,6 +48,8 @@ export default function PrivacyPage() {
 					<ul className="list-disc space-y-1 pl-5">
 						<li>수탁업체: Google LLC (Gmail 이메일 발송 서비스)</li>
 						<li>위탁업무: 상담신청 내용의 메일 전송</li>
+						<li>수탁업체: Vercel Inc. (파일 저장 서비스)</li>
+						<li>위탁업무: 상담신청 첨부파일의 임시 보관 — 메일 발송 후 즉시 삭제하며, 신청이 완료되지 않은 파일도 일정 기간이 지나면 삭제합니다.</li>
 					</ul>
 				</section>
 
