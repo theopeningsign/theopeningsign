@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { upload } from '@vercel/blob/client';
 import { useWishlist } from '@/hooks/useWishlist';
 import { removeWishlist, clearWishlist } from '@/lib/wishlist';
+import {
+	ACCEPT_ATTR, ALLOWED_TYPES, ATTACH_PREFIX, MAX_FILES, MAX_FILE_BYTES, MAX_TOTAL_BYTES,
+	fileExt, formatBytes, type AttachmentRef,
+} from '@/lib/attachments';
 
 type FormValues = {
 	clinic?: string;         // 병원명 (선택 — 개원 전 미정일 수 있음)
@@ -33,14 +38,66 @@ export default function ConsultationForm() {
 	const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormValues>();
 	const wishlist = useWishlist();
 	const [submitted, setSubmitted] = useState(false);
+	const [files, setFiles] = useState<File[]>([]);
+	const [fileError, setFileError] = useState('');
+	const [progress, setProgress] = useState('');
+	const fileInput = useRef<HTMLInputElement>(null);
+
+	function addFiles(list: FileList | null) {
+		if (!list) return;
+		const next = [...files];
+		const rejected: string[] = [];
+		for (const f of Array.from(list)) {
+			if (!ALLOWED_TYPES[fileExt(f.name)]) rejected.push(`${f.name}: 사진(jpg·png·heic 등)과 PDF만 첨부할 수 있어요.`);
+			else if (f.size > MAX_FILE_BYTES) rejected.push(`${f.name}: 파일 하나는 ${formatBytes(MAX_FILE_BYTES)}까지 첨부할 수 있어요.`);
+			else if (next.length >= MAX_FILES) rejected.push(`첨부파일은 최대 ${MAX_FILES}개까지예요.`);
+			else if (next.reduce((n, x) => n + x.size, 0) + f.size > MAX_TOTAL_BYTES) rejected.push(`첨부파일 합계는 ${formatBytes(MAX_TOTAL_BYTES)}까지예요.`);
+			else next.push(f);
+		}
+		setFiles(next);
+		setFileError([...new Set(rejected)].join('\n'));
+		if (fileInput.current) fileInput.current.value = '';
+	}
+
+	// 원본 그대로 Blob(비공개)에 직접 올린다. 서버 용량 제한(4.5MB)을 거치지 않는다.
+	async function uploadFiles(): Promise<AttachmentRef[]> {
+		const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+		const refs: AttachmentRef[] = [];
+		for (let i = 0; i < files.length; i++) {
+			const f = files[i];
+			const ext = fileExt(f.name);
+			const id = (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`).toLowerCase();
+			const blob = await upload(`${ATTACH_PREFIX}${day}/${id}.${ext}`, f, {
+				access: 'private',
+				handleUploadUrl: '/api/contact/upload',
+				contentType: ALLOWED_TYPES[ext],
+				multipart: f.size > 8 * 1024 * 1024,
+				onUploadProgress: ({ percentage }) => setProgress(`첨부파일 올리는 중 ${i + 1}/${files.length} (${Math.round(percentage)}%)`),
+			});
+			refs.push({ pathname: blob.pathname, name: f.name });
+		}
+		return refs;
+	}
 
 	async function onSubmit(data: FormValues) {
 		if (data.company_website) return; // 허니팟
+		let attachments: AttachmentRef[] = [];
+		if (files.length) {
+			try {
+				attachments = await uploadFiles();
+			} catch (e) {
+				console.error(e);
+				setProgress('');
+				alert('첨부파일을 올리지 못했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.');
+				return;
+			}
+		}
+		setProgress(files.length ? '상담신청을 보내는 중…' : '');
 		try {
 			const res = await fetch('/api/contact', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ ...data, wishlist }),
+				body: JSON.stringify({ ...data, wishlist, attachments }),
 			});
 			if (!res.ok) {
 				const j = await res.json().catch(() => ({}));
@@ -50,8 +107,11 @@ export default function ConsultationForm() {
 			setSubmitted(true);
 			reset();
 			clearWishlist();
+			setFiles([]);
 		} catch {
 			alert('전송 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+		} finally {
+			setProgress('');
 		}
 	}
 
@@ -141,6 +201,52 @@ export default function ConsultationForm() {
 				<textarea rows={4} className={inputClass} placeholder="원하시는 간판 느낌, 예산, 일정 등 자유롭게 적어주세요." {...register('request')} />
 			</div>
 
+			{/* 첨부파일 (선택) */}
+			<div>
+				<label className={labelClass}>첨부파일 <span className="text-slate-400">(선택)</span></label>
+				<p className="mb-2 text-xs text-slate-500 break-keep">
+					현장 사진, 원하는 간판 참고 이미지, 도면 등을 원본 그대로 보내주세요. 사진·PDF, 파일당 {formatBytes(MAX_FILE_BYTES)}, 최대 {MAX_FILES}개.
+				</p>
+				<input
+					ref={fileInput}
+					type="file"
+					multiple
+					accept={ACCEPT_ATTR}
+					className="hidden"
+					onChange={(e) => addFiles(e.target.files)}
+				/>
+				<button
+					type="button"
+					onClick={() => fileInput.current?.click()}
+					disabled={isSubmitting}
+					className="rounded-lg border border-dashed border-slate-300 px-4 py-2.5 text-sm text-slate-700 transition hover:border-[#ED6A26] hover:text-[#ED6A26] disabled:opacity-60"
+				>
+					+ 파일 선택
+				</button>
+				{files.length > 0 && (
+					<ul className="mt-3 space-y-1.5">
+						{files.map((f, i) => (
+							<li key={`${f.name}-${i}`} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+								<span className="min-w-0 truncate">{f.name}</span>
+								<span className="flex shrink-0 items-center gap-3 text-slate-400">
+									{formatBytes(f.size)}
+									<button
+										type="button"
+										onClick={() => setFiles(files.filter((_, j) => j !== i))}
+										disabled={isSubmitting}
+										className="hover:text-red-600"
+										aria-label={`${f.name} 삭제`}
+									>
+										✕
+									</button>
+								</span>
+							</li>
+						))}
+					</ul>
+				)}
+				{fileError && <p className="mt-2 whitespace-pre-line text-sm text-red-600">{fileError}</p>}
+			</div>
+
 			{/* 허니팟 */}
 			<input type="text" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" {...register('company_website')} />
 
@@ -162,7 +268,7 @@ export default function ConsultationForm() {
 				disabled={isSubmitting}
 				className="w-full rounded-lg bg-[#D45720] px-5 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-[#ED6A26] disabled:opacity-60"
 			>
-				상담 신청하기
+				{isSubmitting ? (progress || '보내는 중…') : '상담 신청하기'}
 			</button>
 		</form>
 	);
