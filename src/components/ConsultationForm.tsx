@@ -204,8 +204,9 @@ export default function ConsultationForm() {
 			{/* 첨부파일 (선택) */}
 			<div>
 				<label className={labelClass}>첨부파일 <span className="text-slate-400">(선택)</span></label>
-				<p className="mb-2 text-xs text-slate-500 break-keep">
-					현장 사진, 원하는 간판 참고 이미지, 도면 등을 원본 그대로 보내주세요. 사진·PDF, 파일당 {formatBytes(MAX_FILE_BYTES)}, 최대 {MAX_FILES}개.
+				<p className="mb-2 text-sm text-slate-500 break-keep">
+					현장 사진, 원하는 간판 참고 이미지 등을 보내주세요.
+					<span className="ml-1.5 text-xs text-slate-400">파일당 {formatBytes(MAX_FILE_BYTES)} 이하, 최대 {MAX_FILES}개</span>
 				</p>
 				<input
 					ref={fileInput}
