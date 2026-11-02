@@ -2,9 +2,9 @@
 // 파일은 브라우저에서 Vercel Blob(비공개)으로 원본 그대로 올리고, 서버가 메일에 첨부한 뒤 Blob에서 지운다.
 
 export const ATTACH_PREFIX = 'contact/';
-export const MAX_FILES = 10;
+export const MAX_FILES = 5;
 export const MAX_FILE_BYTES = 15 * 1024 * 1024;   // 파일 1개 최대 15MB
-export const MAX_TOTAL_BYTES = 60 * 1024 * 1024;  // 한 번에 최대 60MB
+export const MAX_TOTAL_BYTES = 75 * 1024 * 1024;  // 한 번에 최대 75MB (5개 × 15MB)
 // 메일 1통에 넣을 첨부 합계. 첨부는 전송 시 약 1.37배로 커지므로 수신 한도(25MB)보다 여유 있게 잡는다.
 export const MAIL_BATCH_BYTES = 15 * 1024 * 1024;
 
