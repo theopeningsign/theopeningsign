@@ -41,6 +41,7 @@ export default function ConsultationForm() {
 	const [files, setFiles] = useState<File[]>([]);
 	const [fileError, setFileError] = useState('');
 	const [progress, setProgress] = useState('');
+	const [failedFiles, setFailedFiles] = useState<string[]>([]);
 	const fileInput = useRef<HTMLInputElement>(null);
 
 	function addFiles(list: FileList | null) {
@@ -60,50 +61,54 @@ export default function ConsultationForm() {
 	}
 
 	// 원본 그대로 Blob(비공개)에 직접 올린다. 서버 용량 제한(4.5MB)을 거치지 않는다.
-	async function uploadFiles(): Promise<AttachmentRef[]> {
+	// 파일별로 따로 시도하고, 실패한 파일은 이름만 모아 상담신청과 함께 보낸다(신청 자체는 막지 않음).
+	async function uploadFiles(): Promise<{ refs: AttachmentRef[]; failed: string[] }> {
 		const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 		const refs: AttachmentRef[] = [];
+		const failed: string[] = [];
 		for (let i = 0; i < files.length; i++) {
 			const f = files[i];
 			const ext = fileExt(f.name);
 			const id = (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`).toLowerCase();
-			const blob = await upload(`${ATTACH_PREFIX}${day}/${id}.${ext}`, f, {
-				access: 'private',
-				handleUploadUrl: '/api/contact/upload',
-				contentType: ALLOWED_TYPES[ext],
-				multipart: f.size > 8 * 1024 * 1024,
-				onUploadProgress: ({ percentage }) => setProgress(`첨부파일 올리는 중 ${i + 1}/${files.length} (${Math.round(percentage)}%)`),
-			});
-			refs.push({ pathname: blob.pathname, name: f.name });
+			try {
+				const blob = await upload(`${ATTACH_PREFIX}${day}/${id}.${ext}`, f, {
+					access: 'private',
+					handleUploadUrl: '/api/contact/upload',
+					contentType: ALLOWED_TYPES[ext],
+					multipart: f.size > 8 * 1024 * 1024,
+					abortSignal: AbortSignal.timeout(3 * 60 * 1000),
+					onUploadProgress: ({ percentage }) => setProgress(`첨부파일 올리는 중 ${i + 1}/${files.length} (${Math.round(percentage)}%)`),
+				});
+				refs.push({ pathname: blob.pathname, name: f.name });
+			} catch (e) {
+				console.error('[첨부 업로드 실패]', f.name, e);
+				failed.push(f.name);
+			}
 		}
-		return refs;
+		return { refs, failed };
 	}
 
 	async function onSubmit(data: FormValues) {
 		if (data.company_website) return; // 허니팟
 		let attachments: AttachmentRef[] = [];
+		let attachmentErrors: string[] = [];
 		if (files.length) {
-			try {
-				attachments = await uploadFiles();
-			} catch (e) {
-				console.error(e);
-				setProgress('');
-				alert('첨부파일을 올리지 못했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.');
-				return;
-			}
+			({ refs: attachments, failed: attachmentErrors } = await uploadFiles());
 		}
 		setProgress(files.length ? '상담신청을 보내는 중…' : '');
 		try {
 			const res = await fetch('/api/contact', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ ...data, wishlist, attachments }),
+				body: JSON.stringify({ ...data, wishlist, attachments, attachmentErrors }),
 			});
 			if (!res.ok) {
 				const j = await res.json().catch(() => ({}));
 				alert(j.error || '전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
 				return;
 			}
+			const j = await res.json().catch(() => ({}));
+			setFailedFiles(Array.isArray(j.attachmentFailed) ? j.attachmentFailed : attachmentErrors);
 			setSubmitted(true);
 			reset();
 			clearWishlist();
@@ -121,6 +126,11 @@ export default function ConsultationForm() {
 				<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#ED6A26] text-2xl text-white">✓</div>
 				<h2 className="text-xl font-bold text-slate-900">상담신청이 접수되었습니다</h2>
 				<p className="mt-2 text-slate-600">빠른 시일 내에 연락드리겠습니다.<br />감사합니다.</p>
+				{failedFiles.length > 0 && (
+					<p className="mx-auto mt-4 max-w-md rounded-lg bg-white/70 px-4 py-3 text-sm text-slate-600 break-keep">
+						첨부파일 일부({failedFiles.join(', ')})는 전송되지 않았어요. 상담 연락드릴 때 다시 받아볼게요.
+					</p>
+				)}
 				<button
 					type="button"
 					onClick={() => setSubmitted(false)}

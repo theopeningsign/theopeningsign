@@ -8,7 +8,7 @@ import {
 } from '@/lib/attachments';
 
 // 첨부 원본을 Blob에서 받아 메일로 보내는 시간까지 여유를 둔다.
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'biz@ganpoom.com';
 // Gmail SMTP(앱 비밀번호) 발신 계정. 메일은 이 계정으로 나가고 표시는 "더오프닝사인 상담신청".
@@ -34,32 +34,41 @@ const ATTACH_PATH_RE = new RegExp(`^${ATTACH_PREFIX}\\d{8}/[A-Za-z0-9-]+\\.[a-z0
 function safeFilename(name: unknown, pathname: string): string {
 	const ext = fileExt(pathname);
 	const base = String(name ?? '').replace(/[\\/:*?"<>|\r\n\t]/g, '_').trim().slice(0, 120);
+	if (!ext) return base || '첨부';
 	if (!base) return `첨부.${ext}`;
 	return fileExt(base) === ext ? base : `${base}.${ext}`;
 }
 
-async function loadAttachments(refs: AttachmentRef[]): Promise<MailFile[] | string> {
-	if (refs.length > MAX_FILES) return `첨부파일은 최대 ${MAX_FILES}개까지 보낼 수 있습니다.`;
+type FailedFile = { name: string; reason: string };
+
+// 첨부는 파일별로 따로 시도한다. 하나가 실패해도 나머지와 상담신청 메일은 계속 진행.
+// 전체 불러오기에 시간 상한을 둬서, 첨부 때문에 상담신청 메일이 시간 초과로 못 나가는 일을 막는다.
+async function loadAttachments(refs: AttachmentRef[]): Promise<{ files: MailFile[]; failed: FailedFile[] }> {
 	const files: MailFile[] = [];
+	const failed: FailedFile[] = [];
+	const deadline = Date.now() + 60 * 1000;
 	let total = 0;
-	for (const ref of refs) {
+	for (const [i, ref] of refs.entries()) {
 		const pathname = String(ref?.pathname ?? '');
-		if (!ATTACH_PATH_RE.test(pathname) || !ALLOWED_TYPES[fileExt(pathname)]) return '첨부파일 정보가 올바르지 않습니다.';
-		const res = await get(pathname, { access: 'private', useCache: false });
-		if (!res || res.statusCode !== 200) return '첨부파일을 찾지 못했습니다. 다시 첨부해주세요.';
-		if (res.blob.size > MAX_FILE_BYTES) return `파일 하나는 ${formatBytes(MAX_FILE_BYTES)}까지 첨부할 수 있습니다.`;
-		total += res.blob.size;
-		if (total > MAX_TOTAL_BYTES) return '첨부파일 합계가 너무 큽니다.';
-		const content = Buffer.from(await new Response(res.stream).arrayBuffer());
-		files.push({
-			filename: safeFilename(ref.name, pathname),
-			content,
-			contentType: ALLOWED_TYPES[fileExt(pathname)],
-			size: content.length,
-			pathname,
-		});
+		const name = safeFilename(ref?.name, pathname);
+		if (i >= MAX_FILES) { failed.push({ name, reason: `최대 ${MAX_FILES}개 초과` }); continue; }
+		if (!ATTACH_PATH_RE.test(pathname) || !ALLOWED_TYPES[fileExt(pathname)]) { failed.push({ name, reason: '잘못된 파일 정보' }); continue; }
+		const remaining = deadline - Date.now();
+		if (remaining <= 0) { failed.push({ name, reason: '불러오기 시간 초과' }); continue; }
+		try {
+			const res = await get(pathname, { access: 'private', useCache: false, abortSignal: AbortSignal.timeout(Math.min(remaining, 30 * 1000)) });
+			if (!res || res.statusCode !== 200) { failed.push({ name, reason: '저장소에서 파일을 찾지 못함' }); continue; }
+			if (res.blob.size > MAX_FILE_BYTES) { failed.push({ name, reason: `${formatBytes(MAX_FILE_BYTES)} 초과` }); continue; }
+			if (total + res.blob.size > MAX_TOTAL_BYTES) { failed.push({ name, reason: '합계 용량 초과' }); continue; }
+			const content = Buffer.from(await new Response(res.stream).arrayBuffer());
+			total += content.length;
+			files.push({ filename: name, content, contentType: ALLOWED_TYPES[fileExt(pathname)], size: content.length, pathname });
+		} catch (e) {
+			console.error('[contact] 첨부 불러오기 실패', pathname, e);
+			failed.push({ name, reason: '저장소에서 불러오기 실패' });
+		}
 	}
-	return files;
+	return { files, failed };
 }
 
 // 메일 1통 첨부 합계가 MAIL_BATCH_BYTES를 넘지 않도록 나눈다.
@@ -114,19 +123,19 @@ export async function POST(req: NextRequest) {
 	}
 	if (!body.agree) return NextResponse.json({ error: '개인정보 수집·이용 동의가 필요합니다.' }, { status: 400 });
 
+	// 첨부 처리는 어떤 경우에도 상담신청 메일 발송을 막지 않는다.
 	const refs: AttachmentRef[] = Array.isArray(body.attachments) ? (body.attachments as AttachmentRef[]) : [];
+	// 브라우저에서 업로드부터 실패한 파일 이름
+	const clientFailed: FailedFile[] = (Array.isArray(body.attachmentErrors) ? body.attachmentErrors : [])
+		.slice(0, MAX_FILES * 2)
+		.map((n) => ({ name: safeFilename(n, 'x.' + fileExt(String(n ?? ''))), reason: '고객 화면에서 업로드 실패' }));
 	let files: MailFile[] = [];
+	let failed: FailedFile[] = [...clientFailed];
 	if (refs.length) {
-		try {
-			const loaded = await loadAttachments(refs);
-			if (typeof loaded === 'string') return NextResponse.json({ error: loaded }, { status: 400 });
-			files = loaded;
-		} catch (e) {
-			console.error('[contact] 첨부 불러오기 실패', e);
-			return NextResponse.json({ error: '첨부파일을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.' }, { status: 502 });
-		}
+		const loaded = await loadAttachments(refs.slice(0, MAX_FILES * 2));
+		files = loaded.files;
+		failed = failed.concat(loaded.failed);
 	}
-	const batches = batchFiles(files);
 
 	const openStatus = body.openStatus === 'before' ? '개원 전' : '영업 중';
 
@@ -137,22 +146,33 @@ export async function POST(req: NextRequest) {
 			.join('')}</ul>`
 		: '<span style="color:#888">없음</span>';
 
-	const rows: [string, string][] = [
-		['병원명', esc(body.clinic) || '<span style="color:#888">미정</span>'],
-		['진료과목', esc(body.department)],
-		['담당자', esc(body.name)],
-		['연락처', esc(body.phone)],
-		['주소', esc(body.address)],
-		['개원 여부', openStatus],
-		['요청사항', esc(body.request) || '<span style="color:#888">없음</span>'],
-		['참고 포트폴리오', wishHtml],
-		['첨부파일', files.length
-			? `<ul style="margin:0;padding-left:18px">${files.map((f) => `<li>${esc(f.filename)} (${formatBytes(f.size)})</li>`).join('')}</ul>`
-				+ (batches.length > 1 ? `<p style="margin:6px 0 0;color:#64748b;font-size:12px">용량이 커서 메일 ${batches.length}통으로 나눠 보냈습니다.</p>` : '')
-			: '<span style="color:#888">없음</span>'],
-	];
+	const subject = `[상담신청] ${esc(body.clinic) || esc(body.department)} / ${esc(body.name)}`;
+	const failedHtml = (list: FailedFile[]) =>
+		`<div style="margin-top:6px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:13px">
+			⚠️ 아래 첨부파일은 전송되지 못했습니다. 고객에게 따로 받아주세요.
+			<ul style="margin:4px 0 0;padding-left:18px">${list.map((f) => `<li>${esc(f.name)} — ${esc(f.reason)}</li>`).join('')}</ul>
+		</div>`;
 
-	const html = `
+	// sent: 이 메일에 실제로 붙는 파일, laterCount: 이어서 나눠 보낼 메일 수
+	const buildHtml = (sent: MailFile[], laterFiles: MailFile[], laterCount: number, failedList: FailedFile[]) => {
+		const attached = sent.concat(laterFiles);
+		const attachCell = (attached.length
+			? `<ul style="margin:0;padding-left:18px">${attached.map((f) => `<li>${esc(f.filename)} (${formatBytes(f.size)})</li>`).join('')}</ul>`
+				+ (laterCount ? `<p style="margin:6px 0 0;color:#64748b;font-size:12px">용량이 커서 첨부를 메일 ${laterCount + 1}통으로 나눠 보냅니다.</p>` : '')
+			: (failedList.length ? '' : '<span style="color:#888">없음</span>'))
+			+ (failedList.length ? failedHtml(failedList) : '');
+		const rows: [string, string][] = [
+			['병원명', esc(body.clinic) || '<span style="color:#888">미정</span>'],
+			['진료과목', esc(body.department)],
+			['담당자', esc(body.name)],
+			['연락처', esc(body.phone)],
+			['주소', esc(body.address)],
+			['개원 여부', openStatus],
+			['요청사항', esc(body.request) || '<span style="color:#888">없음</span>'],
+			['참고 포트폴리오', wishHtml],
+			['첨부파일', attachCell],
+		];
+		return `
 	<div style="font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;max-width:640px;margin:0 auto;color:#1e293b">
 		<h2 style="color:#ED6A26;margin:0 0 4px">새 상담신청</h2>
 		<p style="margin:0 0 16px;color:#64748b;font-size:13px">${esc(body.clinic)} · ${esc(body.name)} 님</p>
@@ -164,41 +184,81 @@ export async function POST(req: NextRequest) {
 				</tr>`).join('')}
 		</table>
 	</div>`;
+	};
 
 	const transporter = nodemailer.createTransport({
 		service: 'gmail',
 		auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+		connectionTimeout: 20 * 1000,
+		greetingTimeout: 20 * 1000,
+		socketTimeout: 60 * 1000,
 	});
-	const subject = `[상담신청] ${esc(body.clinic) || esc(body.department)} / ${esc(body.name)}`;
+	const replyTo = typeof body.email === 'string' && body.email ? body.email : undefined;
 	const toMailAttachments = (batch: MailFile[] = []) =>
 		batch.map((f) => ({ filename: f.filename, content: f.content, contentType: f.contentType }));
+
+	let batches = batchFiles(files);
+	const sentFiles: MailFile[] = [];
+
+	// 1) 상담신청 메일: 첫 묶음을 붙여 보내고, 실패하면 첨부 없이 다시 보낸다. 이것만은 반드시 나가야 한다.
 	try {
 		await transporter.sendMail({
-			from: FROM_EMAIL,
-			to: TO_EMAIL,
-			replyTo: typeof body.email === 'string' && body.email ? body.email : undefined,
+			from: FROM_EMAIL, to: TO_EMAIL, replyTo,
 			subject: batches.length > 1 ? `${subject} (첨부 1/${batches.length})` : subject,
-			html,
+			html: buildHtml(batches[0] ?? [], batches.slice(1).flat(), Math.max(0, batches.length - 1), failed),
 			attachments: toMailAttachments(batches[0]),
 		});
-		// 나머지 첨부는 같은 제목에 번호를 붙여 이어서 보낸다.
-		for (let i = 1; i < batches.length; i++) {
-			await transporter.sendMail({
-				from: FROM_EMAIL,
-				to: TO_EMAIL,
-				subject: `${subject} (첨부 ${i + 1}/${batches.length})`,
-				html: `<p style="font-family:sans-serif;color:#1e293b">${esc(body.clinic) || esc(body.department)} · ${esc(body.name)} 님 상담신청의 첨부파일 ${i + 1}/${batches.length}입니다.</p>`,
-				attachments: toMailAttachments(batches[i]),
-			});
-		}
-		// 메일에 원본이 들어갔으니 Blob에서는 지운다. 오래된 미사용 파일도 함께 정리.
-		if (files.length) {
-			await del(files.map((f) => f.pathname)).catch((e) => console.error('[contact] 첨부 삭제 실패', e));
-		}
-		if (process.env.BLOB_READ_WRITE_TOKEN) await cleanupOrphans();
-		return NextResponse.json({ ok: true });
+		sentFiles.push(...(batches[0] ?? []));
+		batches = batches.slice(1);
 	} catch (e) {
-		console.error('[contact] 발송 예외', e);
-		return NextResponse.json({ error: '메일 발송 중 오류가 발생했습니다.' }, { status: 502 });
+		if (!files.length) {
+			console.error('[contact] 발송 예외', e);
+			return NextResponse.json({ error: '메일 발송 중 오류가 발생했습니다.' }, { status: 502 });
+		}
+		console.error('[contact] 첨부 포함 발송 실패 → 첨부 없이 재발송', e);
+		failed = failed.concat(files.map((f) => ({ name: f.filename, reason: '메일 첨부 발송 실패' })));
+		batches = [];
+		try {
+			await transporter.sendMail({
+				from: FROM_EMAIL, to: TO_EMAIL, replyTo, subject,
+				html: buildHtml([], [], 0, failed),
+			});
+		} catch (e2) {
+			console.error('[contact] 발송 예외(첨부 없이 재시도도 실패)', e2);
+			return NextResponse.json({ error: '메일 발송 중 오류가 발생했습니다.' }, { status: 502 });
+		}
 	}
+
+	// 2) 나머지 첨부 묶음. 실패해도 상담신청은 이미 접수됐으므로 기록만 남긴다.
+	const total = batches.length + 1;
+	const laterFailed: FailedFile[] = [];
+	for (const [i, batch] of batches.entries()) {
+		try {
+			await transporter.sendMail({
+				from: FROM_EMAIL, to: TO_EMAIL,
+				subject: `${subject} (첨부 ${i + 2}/${total})`,
+				html: `<p style="font-family:sans-serif;color:#1e293b">${esc(body.clinic) || esc(body.department)} · ${esc(body.name)} 님 상담신청의 첨부파일 ${i + 2}/${total}입니다.</p>`,
+				attachments: toMailAttachments(batch),
+			});
+			sentFiles.push(...batch);
+		} catch (e) {
+			console.error('[contact] 추가 첨부 메일 실패', e);
+			laterFailed.push(...batch.map((f) => ({ name: f.filename, reason: '메일 첨부 발송 실패' })));
+		}
+	}
+	if (laterFailed.length) {
+		failed = failed.concat(laterFailed);
+		await transporter.sendMail({
+			from: FROM_EMAIL, to: TO_EMAIL,
+			subject: `${subject} (첨부 일부 전송 실패)`,
+			html: `<div style="font-family:sans-serif">${failedHtml(laterFailed)}</div>`,
+		}).catch((e) => console.error('[contact] 첨부 실패 안내 메일도 실패', e));
+	}
+
+	// 3) 메일에 들어간 원본은 Blob에서 지우고, 오래된 미사용 파일도 정리. 실패해도 응답에는 영향 없음.
+	if (sentFiles.length) {
+		await del(sentFiles.map((f) => f.pathname)).catch((e) => console.error('[contact] 첨부 삭제 실패', e));
+	}
+	if (process.env.BLOB_READ_WRITE_TOKEN) await cleanupOrphans();
+	return NextResponse.json({ ok: true, attachmentFailed: failed.map((f) => f.name) });
 }
